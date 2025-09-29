@@ -22,17 +22,8 @@ def register():
             error = 'Username is required.'
         elif not password:
             error = 'Password is required.'
-        else:
-            if not re.search(r"[a-z]", password):
-                error += 'Password must contain at lease one lowercase letter. '
-            if not re.search(r"[A-Z]", password):
-                error += 'Password must contain at lease one upercase letter. '
-            if not re.search(r"\d", password):
-                error += 'Password must contain at lease one number. '
-            if not re.search(r"[!@#$%^&*()_+-=\[\]{}|;:',.<>/?`~]", password):
-                error += 'Password must contain at lease special character. '
-            if len(password) < 8:
-                error += 'Password must be at least 8 characters long. '
+        elif len(password) < 8:
+            error = 'Password must be at least 8 characters long. '
 
         if error == '':
             try:
