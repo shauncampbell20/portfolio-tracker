@@ -1,5 +1,7 @@
 import os
 from flask import Flask 
+#from flask_caching import Cache
+from portfolio_tracker.helpers import cache
 
 def create_app(test_config=None):
     # create and configure the app
@@ -7,8 +9,11 @@ def create_app(test_config=None):
     app.config.from_mapping(
         SECRET_KEY='dev',
         DATABASE=os.path.join(app.instance_path, 'db.sqlite'),
+        DEBUG=True,
+        CACHE_TYPE="SimpleCache",
+        CACHE_DEFAULT_TIMEOUT=300
     )
-
+    cache.init_app(app)
     if test_config is None:
         # load the instance config, if it exists, when not testing
         app.config.from_pyfile('config.py', silent=True)
