@@ -12,6 +12,7 @@ bp = Blueprint('transactions', __name__, url_prefix='/transactions')
 @bp.route('/enter', methods=('GET','POST'))
 @login_required
 def enter():
+    # Enter transactions function
     tran = {}
     if request.method == 'POST':
         tran['tran_date'] = request.form['date']
@@ -49,3 +50,12 @@ def enter():
             flash(error)
 
     return render_template('transactions/enter.html', tran=tran)
+
+@bp.route('/view', methods=('GET', 'POST'))
+@login_required
+def view():
+    # View transactions
+    db = get_db()
+    df = pd.read_sql_query('''SELECT * FROM transactions WHERE user_id = ?''', db, params=(g.user['id'],))
+    trans = df.sort_values('tran_date').to_dict('records')
+    return render_template('transactions/view.html', trans=trans)

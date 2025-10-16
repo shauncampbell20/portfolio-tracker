@@ -11,4 +11,5 @@ bp = Blueprint('main', __name__)
 
 @bp.route('/')
 def index():
+    # Render main index
     return render_template('main/index.html')
