@@ -31,7 +31,7 @@ def init_db():
         db.executescript(f.read().decode('utf8'))
     db.execute(
         "INSERT INTO user (username, password) VALUES (?, ?)",
-        ('existing_user', generate_password_hash('12345678')),
+        ('test', generate_password_hash('12345678')),
     )
     db.commit()
 

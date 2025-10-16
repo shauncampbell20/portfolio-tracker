@@ -59,3 +59,55 @@ def view():
     df = pd.read_sql_query('''SELECT * FROM transactions WHERE user_id = ?''', db, params=(g.user['id'],))
     trans = df.sort_values('tran_date').to_dict('records')
     return render_template('transactions/view.html', trans=trans)
+
+@bp.route('/delete/<tran_id>', methods=('GET', 'POST'))
+@login_required
+def delete(tran_id):
+    # Delete transaction 
+    db = get_db()
+    db.execute('''DELETE FROM transactions WHERE id = ?''', (tran_id,))
+    db.commit()
+    flash('Transaction deleted')
+    return redirect(url_for('transactions.view'))
+
+@bp.route('/edit/<tran_id>', methods=('GET', 'POST'))
+@login_required
+def edit(tran_id):
+    # Edit transaction
+    db = get_db()
+    tran=db.execute('''SELECT * FROM transactions WHERE id = ?''', (tran_id,)).fetchone()
+    tran = dict(tran)
+    tran['tran_date'] = pd.Timestamp(tran['tran_date']).strftime('%Y-%m-%d')
+    
+    if request.method == 'POST':
+        tran_date = request.form['date']
+        symbol = request.form['symbol']
+        quantity = request.form['quantity']
+        share_price = request.form['share-price']
+        error = None
+
+        if not tran_date:
+            error = 'Date is required.'
+        elif not quantity:
+            error = 'quantity is required.'
+        elif not share_price:
+            error = 'share price is required.'
+        elif not symbol:
+            error = 'symbol is required.'
+        
+        # check symbol
+        test = yf.Ticker(symbol).history(period='7d',interval='1d')
+        if len(test) == 0:
+            error = f"symbol {symbol} not found"
+        
+        if error is None:
+            db.execute('''UPDATE transactions
+            SET tran_date = ?, symbol = ?, quantity = ?, share_price = ?
+            WHERE id = ? ''', (tran_date, symbol, quantity, share_price, tran_id))
+            db.commit()    
+            flash('Transaction Updated')
+            return redirect(url_for('transactions.view'))
+            
+        else:
+            flash(error)
+    return render_template('transactions/enter.html', tran=tran)
