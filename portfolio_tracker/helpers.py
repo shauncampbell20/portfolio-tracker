@@ -67,19 +67,20 @@ def get_positions_table():
     # Generate positions table from dataframe of transactions
     df = get_transactions()
     
-    positions=df.groupby('symbol',as_index=False).agg({'quantity':'sum', 'mk_val':'sum', 'cost_basis':'sum', 'last_price':'max','previous_val':'sum'})
-    positions['mk_val']=positions['mk_val'].apply(lambda x: round(x,2))
-    positions['cost_basis']=positions['cost_basis'].apply(lambda x: round(x,2))
-    positions['gain_loss']=positions['mk_val']-positions['cost_basis']
-    positions['gain_loss_pct']=round(positions['gain_loss']/positions['cost_basis']*100,2)
-    positions['daily_gain_loss']=positions['mk_val']-positions['previous_val']
-    positions['daily_gain_loss_pct']=round(positions['daily_gain_loss']/positions['previous_val']*100,2)
-    positions.drop('previous_val',axis=1,inplace=True)
-    positions.columns = ['Symbol','Qty','Mkt Val','Cost Basis','Price','Gain Loss $','Gain Loss %','Day Chng $','Day Chng %']
-    positions = positions[['Symbol','Qty','Price','Mkt Val','Day Chng $','Day Chng %','Cost Basis','Gain Loss $','Gain Loss %']]
-    positions.sort_values('Mkt Val',ascending=False,inplace=True)
+    if len(df) > 0:
+        positions=df.groupby('symbol',as_index=False).agg({'quantity':'sum', 'mk_val':'sum', 'cost_basis':'sum', 'last_price':'max','previous_val':'sum'})
+        positions['mk_val']=positions['mk_val'].apply(lambda x: round(x,2))
+        positions['cost_basis']=positions['cost_basis'].apply(lambda x: round(x,2))
+        positions['gain_loss']=positions['mk_val']-positions['cost_basis']
+        positions['gain_loss_pct']=round(positions['gain_loss']/positions['cost_basis']*100,2)
+        positions['daily_gain_loss']=positions['mk_val']-positions['previous_val']
+        positions['daily_gain_loss_pct']=round(positions['daily_gain_loss']/positions['previous_val']*100,2)
+        positions.drop('previous_val',axis=1,inplace=True)
+        positions.columns = ['Symbol','Qty','Mkt Val','Cost Basis','Price','Gain Loss $','Gain Loss %','Day Chng $','Day Chng %']
+        positions = positions[['Symbol','Qty','Price','Mkt Val','Day Chng $','Day Chng %','Cost Basis','Gain Loss $','Gain Loss %']]
+        positions.sort_values('Mkt Val',ascending=False,inplace=True)
 
-    return positions.to_html(classes='table', header="true",index=False)
+        return positions.to_html(classes='table', header="true",index=False)
 
 def get_historical():
     df = get_transactions()
@@ -94,26 +95,27 @@ def get_historical():
 
 def get_history_graph():
     df = get_transactions()
-    history = get_historical()
-    trades=df.groupby(['tran_date','symbol'],as_index=False).agg({'quantity':sum})
-    trades['tran_date']=pd.DatetimeIndex(trades['tran_date'])
-    trades=trades.pivot(columns='symbol',index='tran_date')
-    qhistory=pd.DataFrame(index=history.index).merge(trades['quantity'],left_index=True, right_index=True,how='outer')
-    qhistory=qhistory.fillna(0).cumsum(axis=0)
-    qhistory=qhistory[qhistory.index.isin(history.index)]
-    value_history=pd.DataFrame((history*qhistory).sum(axis=1), columns=['value'])
-    #fig = px.line(value_history, x=value_history.index, y="value", title='Portfolio Value')
-    fig = go.Figure()
-    fig.add_trace(go.Scatter(
-        x=value_history.index,
-        y=value_history['value'],
-        mode='lines',
-        name='Solid Line',
-        line=dict(
-            color='green',  
-            width=2,       
-            dash='solid'   
-        )
-    ))
-    fig.update_layout(template='plotly_white')
-    return fig.to_html()
+    if len(df) > 0:
+        history = get_historical()
+        trades=df.groupby(['tran_date','symbol'],as_index=False).agg({'quantity':sum})
+        trades['tran_date']=pd.DatetimeIndex(trades['tran_date'])
+        trades=trades.pivot(columns='symbol',index='tran_date')
+        qhistory=pd.DataFrame(index=history.index).merge(trades['quantity'],left_index=True, right_index=True,how='outer')
+        qhistory=qhistory.fillna(0).cumsum(axis=0)
+        qhistory=qhistory[qhistory.index.isin(history.index)]
+        value_history=pd.DataFrame((history*qhistory).sum(axis=1), columns=['value'])
+        #fig = px.line(value_history, x=value_history.index, y="value", title='Portfolio Value')
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(
+            x=value_history.index,
+            y=value_history['value'],
+            mode='lines',
+            name='Solid Line',
+            line=dict(
+                color='green',  
+                width=2,       
+                dash='solid'   
+            )
+        ))
+        fig.update_layout(template='plotly_white')
+        return fig.to_html()

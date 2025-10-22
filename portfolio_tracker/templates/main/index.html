@@ -9,15 +9,25 @@
   <div class="container-fluid">
     <div class="row justify-content-center">
       <div class="col-6">
-        {{ graph|safe }}
+        <div class="card mb-3 mt-3">
+          <div class="card-body">
+            <h5 class="card-title">Historical Portfolio Value</h5>
+            {{ graph|safe }}
+          </div>
+        </div>
       </div>
       <div class="col-6">
-        
+
       </div>
     </div>
     <div class="row justify-content-center">
       <div class="col-6">
-        {{ table|safe }}
+        <div class="card">
+          <div class="card-body">
+            <h5 class="card-title">Positions</h5>
+            {{ table|safe }}
+          </div>
+        </div>
       </div>
       <div class="col-6">
         
