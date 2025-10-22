@@ -43,11 +43,11 @@ def enter():
                     (g.user['id'], tran['tran_date'], tran['symbol'].upper(), tran['quantity'], tran['share_price']),
             )
             db.commit()    
-            flash('Transaction Saved')
+            flash('Transaction Saved','success')
             tran = {}
             
         else:
-            flash(error)
+            flash(error,'error')
 
     return render_template('transactions/enter.html', tran=tran)
 
@@ -67,7 +67,7 @@ def delete(tran_id):
     db = get_db()
     db.execute('''DELETE FROM transactions WHERE id = ?''', (tran_id,))
     db.commit()
-    flash('Transaction deleted')
+    flash('Transaction deleted','success')
     return redirect(url_for('transactions.view'))
 
 @bp.route('/edit/<tran_id>', methods=('GET', 'POST'))
@@ -105,9 +105,9 @@ def edit(tran_id):
             SET tran_date = ?, symbol = ?, quantity = ?, share_price = ?
             WHERE id = ? ''', (tran_date, symbol, quantity, share_price, tran_id))
             db.commit()    
-            flash('Transaction Updated')
+            flash('Transaction Updated','success')
             return redirect(url_for('transactions.view'))
             
         else:
-            flash(error)
+            flash(error,'error')
     return render_template('transactions/enter.html', tran=tran)

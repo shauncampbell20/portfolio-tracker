@@ -32,13 +32,13 @@ def register():
                     (username, generate_password_hash(password)),
                 )
                 db.commit()
-                flash('Account created!')
+                flash('Account created!','success')
             except db.IntegrityError:
                 error = f"User {username} is already registered."
             else:
                 return redirect(url_for("auth.login"))
 
-        flash(error)
+        flash(error,'error')
 
     return render_template('auth/register.html')
 
@@ -63,10 +63,10 @@ def login():
         if error is None:
             session.clear()
             session['user_id'] = user['id']
-            flash('Login successful!')
+            flash('Login successful!','success')
             return redirect(url_for('index'))
 
-        flash(error)
+        flash(error,'error')
 
     return render_template('auth/login.html')
 

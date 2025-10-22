@@ -1,11 +1,28 @@
 {% extends 'base.html' %}
 
 {% block header %}
-  <h1>{% block title %}Home{% endblock %}</h1>
+  
 {% endblock %}
 
 {% block content %}
   {% if g.user %}
-    {{ table|safe }}
+  <div class="container-fluid">
+    <div class="row justify-content-center">
+      <div class="col-6">
+        {{ graph|safe }}
+      </div>
+      <div class="col-6">
+        
+      </div>
+    </div>
+    <div class="row justify-content-center">
+      <div class="col-6">
+        {{ table|safe }}
+      </div>
+      <div class="col-6">
+        
+      </div>
+    </div>
+  </div>
   {% endif %}
 {% endblock %} 

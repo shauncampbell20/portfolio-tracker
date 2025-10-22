@@ -1,19 +1,28 @@
 {% extends 'base.html' %}
 
-{% block header %}
-  <h1>{% block title %}Enter Transactions{% endblock %}</h1>
-{% endblock %}
-
 {% block content %}
-  <form method="post">
-    <label for="date">Tranaction Date</label>
-    <input type="date" name="date" id="date" value="{{ tran.tran_date }}" required>
-    <label for="symbol">Symbol</label>
-    <input name="symbol" id="symbol" value="{{ tran.symbol }}" required>
-    <label for="quantity">Quantity</label>
-    <input type="number" step="0.001" name="quantity" id="quantity" value="{{ tran.quantity }}" required>
-    <label for="share-price">Price per Share</label>
-    <input type="number" step="0.001" name="share-price" id="share-price" value="{{ tran.share_price }}" required>
-    <input type="submit" value="Enter">
-  </form>
+  <h1 class="text-center">{% block title %}Enter Transactions{% endblock %}</h1>
+  <div class="container-sm">
+    <form method="post">
+      <div class="mb-3">
+        <label for="date" class="form-label">Tranaction Date</label>
+        <input type="date" class="form-control" name="date" id="date" value="{{ tran.tran_date }}" required>
+      </div>
+      <div class="mb-3">
+        <label for="symbol" class="form-label">Symbol</label>
+        <input name="symbol" class="form-control" id="symbol" value="{{ tran.symbol }}" required>
+      </div>
+      <div class="mb-3">
+        <label for="quantity" class="form-label">Quantity</label>
+        <input type="number" class="form-control" step="0.001" name="quantity" id="quantity" value="{{ tran.quantity }}" required>
+      </div>
+      <div class="mb-3">
+      <label for="share-price" class="form-label">Price per Share</label>
+      <input type="number" class="form-control" step="0.001" name="share-price" id="share-price" value="{{ tran.share_price }}" required>
+      </div>
+      <div class="mb-3">
+      <input type="submit" value="Enter">
+      </div>
+    </form>
+  </div>
 {% endblock %}
