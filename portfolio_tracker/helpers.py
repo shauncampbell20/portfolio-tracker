@@ -79,8 +79,18 @@ def get_positions_table():
         positions.columns = ['Symbol','Qty','Mkt Val','Cost Basis','Price','Gain Loss $','Gain Loss %','Day Chng $','Day Chng %']
         positions = positions[['Symbol','Qty','Price','Mkt Val','Day Chng $','Day Chng %','Cost Basis','Gain Loss $','Gain Loss %']]
         positions.sort_values('Mkt Val',ascending=False,inplace=True)
-
-        return positions.to_html(classes='table', header="true",index=False)
+        print(positions)
+        # fig = go.Figure(data=[go.Table(
+        #     header=dict(values=list(positions.columns),
+        #                 fill_color='paleturquoise',
+        #                 align='left'),
+        #     cells=dict(values=[positions['Symbol'], positions['Qty'], positions['Price'], positions['Gain Loss $'],
+        #                 positions['Gain Loss %'], positions['Day Chng $']],
+        #             fill_color='lavender',
+        #             align='left'))
+        # ])
+        # return fig.to_html()
+        return positions.to_html(classes='table table-hover table-bordered', header="true",index=False, justify='left')
 
 def get_historical():
     df = get_transactions()
@@ -97,7 +107,7 @@ def get_history_graph():
     df = get_transactions()
     if len(df) > 0:
         history = get_historical()
-        trades=df.groupby(['tran_date','symbol'],as_index=False).agg({'quantity':sum})
+        trades=df.groupby(['tran_date','symbol'],as_index=False).agg({'quantity':'sum'})
         trades['tran_date']=pd.DatetimeIndex(trades['tran_date'])
         trades=trades.pivot(columns='symbol',index='tran_date')
         qhistory=pd.DataFrame(index=history.index).merge(trades['quantity'],left_index=True, right_index=True,how='outer')
@@ -117,5 +127,5 @@ def get_history_graph():
                 dash='solid'   
             )
         ))
-        fig.update_layout(template='plotly_white')
-        return fig.to_html()
+        fig.update_layout(template='plotly_white', margin=dict(l=20, r=20, t=20, b=20), autosize=True, height=275)
+        return fig.to_html(config={'displayModeBar': False, 'editable':False, 'responsive':True}, full_html=False)

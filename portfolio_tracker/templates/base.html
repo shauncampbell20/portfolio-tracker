@@ -6,30 +6,32 @@
     <title>Portfolio Tracker</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
   </head>
-  <body>
-    <ul class="nav nav-pills">
-    {% if g.user %}
-    <li class="nav-item">
-        <a class="nav-link" aria-current="page" href="{{ url_for('main.index') }}">Home</a>
-    </li>
-    <li class="nav-item">
-        <a class="nav-link" href="{{ url_for('transactions.enter') }}">Enter Transactions</a>
-    </li>
-    <li class="nav-item">
-        <a class="nav-link" href="{{ url_for('transactions.view') }}">View Transactions</a>
-    </li>
-    <li class="nav-item">
-        <a class="nav-link" href="{{ url_for('auth.logout') }}">Log Out</a>
-    </li>
-    {% else %}
-    <li class="nav-item">
-        <a class="nav-link" href="{{ url_for('auth.register') }}">Create Account</a>
-    </li>
-    <li class="nav-item">
-        <a class="nav-link" href="{{ url_for('auth.login') }}">Log In</a>
-    </li>
-    {% endif %}
-    </ul>
+  <body class="bg-body-tertiary">
+    <nav class="navbar navbar-expand-lg navbar-light bg-light border bg-white">
+      <ul class="nav nav-pills">
+      {% if g.user %}
+      <li class="nav-item">
+          <a class="nav-link {% if request.path == url_for('main.index') %} active {% endif %}" aria-current="page" href="{{ url_for('main.index') }}">Home</a>
+      </li>
+      <li class="nav-item">
+          <a class="nav-link {% if request.path == url_for('transactions.enter') %} active {% endif %}" href="{{ url_for('transactions.enter') }}">Enter Transactions</a>
+      </li>
+      <li class="nav-item">
+          <a class="nav-link {% if request.path == url_for('transactions.view') %} active {% endif %}" href="{{ url_for('transactions.view') }}">View Transactions</a>
+      </li>
+      <li class="nav-item">
+          <a class="nav-link {% if request.path == url_for('auth.logout') %} active {% endif %}" href="{{ url_for('auth.logout') }}">Log Out</a>
+      </li>
+      {% else %}
+      <li class="nav-item">
+          <a class="nav-link {% if request.path == url_for('auth.register') %} active {% endif %}" href="{{ url_for('auth.register') }}">Create Account</a>
+      </li>
+      <li class="nav-item">
+          <a class="nav-link {% if request.path == url_for('auth.login') %} active {% endif %}" href="{{ url_for('auth.login') }}">Log In</a>
+      </li>
+      {% endif %}
+      </ul>
+    </nav>
     <header>
         {% block header %}{% endblock %}
     </header>
