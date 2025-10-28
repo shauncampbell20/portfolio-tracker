@@ -62,6 +62,17 @@ def get_transactions():
     
         return df
 
+def color_positive_green(val):
+    if isinstance(val, (int, float)):
+        if val > 0:
+            color = 'green'
+        elif val < 0:
+            color = 'red'
+        else:
+            color = 'black'
+    else:
+        color = 'black'
+    return f'color: {color}'
 
 def get_positions_table():
     # Generate positions table from dataframe of transactions
@@ -72,9 +83,9 @@ def get_positions_table():
         positions['mk_val']=positions['mk_val'].apply(lambda x: round(x,2))
         positions['cost_basis']=positions['cost_basis'].apply(lambda x: round(x,2))
         positions['gain_loss']=positions['mk_val']-positions['cost_basis']
-        positions['gain_loss_pct']=round(positions['gain_loss']/positions['cost_basis']*100,2)
+        positions['gain_loss_pct']=round(positions['gain_loss']/positions['cost_basis'],4)
         positions['daily_gain_loss']=positions['mk_val']-positions['previous_val']
-        positions['daily_gain_loss_pct']=round(positions['daily_gain_loss']/positions['previous_val']*100,2)
+        positions['daily_gain_loss_pct']=round(positions['daily_gain_loss']/positions['previous_val'],4)
         positions.drop('previous_val',axis=1,inplace=True)
         positions.columns = ['Symbol','Qty','Mkt Val','Cost Basis','Price','Gain Loss $','Gain Loss %','Day Chng $','Day Chng %']
         positions = positions[['Symbol','Qty','Price','Mkt Val','Day Chng $','Day Chng %','Cost Basis','Gain Loss $','Gain Loss %']]
@@ -90,7 +101,23 @@ def get_positions_table():
         #             align='left'))
         # ])
         # return fig.to_html()
-        return positions.to_html(classes='table table-hover table-bordered', header="true",index=False, justify='left')
+        styles = [
+            dict(selector="th", props=[("font-size", "12px")]) # Adjust "16px" as needed
+        ]
+
+        html = (
+            positions.style
+            .set_properties(**{'font-size': '10pt'})
+            .map(color_positive_green, subset=['Day Chng $','Day Chng %','Gain Loss $','Gain Loss %'])
+            .format({'Qty': '{:,.2f}', 'Price': '${:,.2f}', 'Mkt Val': '${:,.2f}', 'Day Chng $': '${:,.2f}', 'Cost Basis': '${:,.2f}', 'Gain Loss $': '${:,.2f}',
+                    'Day Chng %': "{:.2%}", 'Gain Loss %': "{:.2%}"})
+            .hide(axis='index')
+            .set_table_styles(styles)
+            .set_properties(header="true",index=False, justify='left')
+            .set_table_attributes('class="table table-hover table-sm"')
+            .to_html()
+        )
+        return html#positions.to_html(classes='table table-hover table-striped table-sm', header="true",index=False, justify='left')
 
 def get_historical():
     df = get_transactions()

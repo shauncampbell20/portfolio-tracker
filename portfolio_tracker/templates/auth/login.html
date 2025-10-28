@@ -9,6 +9,13 @@
   <div class="p-5 m-3 border bg-white w-50">
     <form method="post">
       <h1 class="h3 mb-3 fw-normal">Log In</h1>
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          {% for category, message in messages %}
+          <div class="alert alert-info" role="alert">{{ message }}</div>
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
       <div class="form-floating">
         <input name="username" class="form-control" id="username" placeholder="username" required>
         <label for="username" class="form-label">Username</label>

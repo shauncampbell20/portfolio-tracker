@@ -17,7 +17,29 @@
         </div>
       </div>
       <div class="col-6">
+        <!-- <div class="card mb-3 mt-3" >
+          <div class="card-body" >
+            <h5 class="card-title">Test</h5>
+            <button onclick="updateChart()">Update Chart</button>
+            <div id="myDiv"></div>
+            <script>
+                var data = [{
+                    y: [1, 2, 3, 4, 5],
+                    type: 'scatter'
+                }];
 
+                Plotly.newPlot('myDiv', data);
+
+                function updateChart() {
+                    var newData = [{
+                        y: [Math.random() * 10, Math.random() * 10, Math.random() * 10, Math.random() * 10, Math.random() * 10],
+                        type: 'scatter'
+                    }];
+                    Plotly.react('myDiv', newData); // Efficiently updates the existing plot
+                }
+            </script>
+          </div>
+        </div> -->
       </div>
     </div>
     <div class="row justify-content-center">
