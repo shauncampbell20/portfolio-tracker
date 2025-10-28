@@ -8,41 +8,33 @@
   {% if g.user %}
   <div class="container-fluid">
     <div class="row justify-content-center">
+      
+      <!-- Historical Value Cell -->
       <div class="col-6">
         <div class="card mb-3 mt-3" >
           <div class="card-body" >
             <h5 class="card-title">Historical Portfolio Value</h5>
+            <div class="btn-group btn-group-toggle" role="group" data-toggle="buttons">
+              <a class="btn btn-sm btn-outline-secondary {% if request.args.get('tf') == '30' %} active {% endif %}" href="{{ url_for('main.index', tf=30) }}" role="button">1 Mo</a>
+              <a class="btn btn-sm btn-outline-secondary {% if request.args.get('tf') == '91' %} active {% endif %}" href="{{ url_for('main.index', tf=91) }}" role="button">3 Mo</a>
+              <a class="btn btn-sm btn-outline-secondary {% if request.args.get('tf') == '182' %} active {% endif %}" href="{{ url_for('main.index', tf=182) }}" role="button">6 Mo</a>
+              <a class="btn btn-sm btn-outline-secondary {% if request.args.get('tf') == '365' %} active {% endif %}" href="{{ url_for('main.index', tf=365) }}" role="button">1 Yr</a>
+              <a class="btn btn-sm btn-outline-secondary {% if request.args.get('tf') == '1095' %} active {% endif %}" href="{{ url_for('main.index', tf=1095) }}" role="button">3 Yr</a>
+              <a class="btn btn-sm btn-outline-secondary {% if request.args.get('tf') == None %} active {% endif %}" href="{{ url_for('main.index') }}" role="button">All</a>
+            </div>
             {{ graph|safe }}
           </div>
         </div>
       </div>
+
+      <!-- Empty Cell -->
       <div class="col-6">
-        <!-- <div class="card mb-3 mt-3" >
-          <div class="card-body" >
-            <h5 class="card-title">Test</h5>
-            <button onclick="updateChart()">Update Chart</button>
-            <div id="myDiv"></div>
-            <script>
-                var data = [{
-                    y: [1, 2, 3, 4, 5],
-                    type: 'scatter'
-                }];
-
-                Plotly.newPlot('myDiv', data);
-
-                function updateChart() {
-                    var newData = [{
-                        y: [Math.random() * 10, Math.random() * 10, Math.random() * 10, Math.random() * 10, Math.random() * 10],
-                        type: 'scatter'
-                    }];
-                    Plotly.react('myDiv', newData); // Efficiently updates the existing plot
-                }
-            </script>
-          </div>
-        </div> -->
       </div>
+
     </div>
     <div class="row justify-content-center">
+
+      <!-- Positions Table Cell -->
       <div class="col-6">
         <div class="card">
           <div class="card-body">
@@ -51,9 +43,11 @@
           </div>
         </div>
       </div>
+      
+      <!-- Empty Cell -->
       <div class="col-6">
-        
       </div>
+
     </div>
   </div>
   {% endif %}

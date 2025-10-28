@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 from portfolio_tracker.db import get_db
 from flask import g 
-from datetime import datetime
+from datetime import datetime, timedelta
 import plotly.express as px
 import plotly.graph_objects as go
 
@@ -130,7 +130,7 @@ def get_historical():
     
     return history
 
-def get_history_graph():
+def get_history_graph(timeframe):
     df = get_transactions()
     if len(df) > 0:
         history = get_historical()
@@ -141,6 +141,12 @@ def get_history_graph():
         qhistory=qhistory.fillna(0).cumsum(axis=0)
         qhistory=qhistory[qhistory.index.isin(history.index)]
         value_history=pd.DataFrame((history*qhistory).sum(axis=1), columns=['value'])
+        print(timeframe)
+        if timeframe:
+            try:
+                value_history = value_history[value_history.index >= datetime.today()-timedelta(days=int(timeframe))]
+            except:
+                pass
         #fig = px.line(value_history, x=value_history.index, y="value", title='Portfolio Value')
         fig = go.Figure()
         fig.add_trace(go.Scatter(

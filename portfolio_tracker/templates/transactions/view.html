@@ -4,6 +4,8 @@
   <div class="d-flex justify-content-center align-items-center min-vh-90">
     <div class="p-5 m-3 border bg-white w-50">
         <h1 class="h3 mb-3 fw-normal">Your Transactions</h1>
+
+        <!-- Flash Messages -->
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 {% for category, message in messages %}
@@ -11,6 +13,8 @@
                 {% endfor %}
             {% endif %}
         {% endwith %}
+
+        <!-- Transactions Table -->
         <table class="table">
                 <thead>
                     <tr>
