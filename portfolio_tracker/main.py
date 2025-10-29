@@ -22,3 +22,7 @@ def index(tf=None):
         positions_table = get_positions_table()
         history_graph = get_history_graph(timeframe)
     return render_template('main/index.html',table=positions_table, graph=history_graph)
+
+@bp.route('/positions', methods=('GET','POST'))
+def positions_endpoint():
+    return get_positions_table()
