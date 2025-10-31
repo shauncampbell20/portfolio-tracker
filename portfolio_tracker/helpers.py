@@ -1,85 +1,119 @@
 import yfinance as yf
-from flask_caching import Cache
+#from flask_caching import Cache
 import numpy as np
 import pandas as pd
 from portfolio_tracker.db import get_db
-from flask import g 
+from portfolio_tracker import cache
+from flask import g, Response
 from datetime import datetime, timedelta
 import plotly.express as px
 import plotly.graph_objects as go
+import time
 
-cache = Cache()
 
-def check_cache():
-    # Function to check the cache to see if update is needed. 
-    # Returns True if update is needed.
-    print('check cache')
-    if g.user:
+class CacheControl:
+    def __init__(self, cache):
+        cache.set('status','')
+
+    def __call__(self):
+        self.check()
+
+    def check(self):
+        if cache.get('status') == 'updating':
+            self.wait()
+        else:
+            if g.user:
         
-        # Load from cache
-        prices = cache.get('prices')
-        if not prices:
-            return True
-        previous_closes = cache.get('previous_closes')
-        if not previous_closes:
-            return True
-        splits = cache.get('splits')
-        if not splits:
-            return True
-        transactions_df = cache.get('transactions_df')
-        if not isinstance(transactions_df, pd.DataFrame):
-            return True
-        history = cache.get('history')
-        if not isinstance(history, pd.DataFrame):
-            return True
+                if cache.get('update_needed'):
+                    self.update()
 
-        db = get_db()
-        df = pd.read_sql_query('''SELECT * FROM transactions WHERE user_id = ?''', db, params=(g.user['id'],))
-        
-        for tick in df['symbol'].unique():
-            if tick not in prices.keys() or tick not in previous_closes.keys() or tick not in splits.keys():
-                return True
+                # Load from cache
+                prices = cache.get('prices')
+                if not prices:
+                    self.update()
+                    return
+                previous_closes = cache.get('previous_closes')
+                if not previous_closes:
+                    self.update()
+                    return
+                splits = cache.get('splits')
+                if not splits:
+                    self.update()
+                    return
+                transactions_df = cache.get('transactions_df')
+                if not isinstance(transactions_df, pd.DataFrame):
+                    self.update()
+                    return
+                history = cache.get('history')
+                if not isinstance(history, pd.DataFrame):
+                    self.update()
+                    return
+                db = get_db()
+                df = pd.read_sql_query('''SELECT * FROM transactions WHERE user_id = ?''', db, params=(g.user['id'],))
+                
+                for tick in df['symbol'].unique():
+                    if tick not in prices.keys() or tick not in previous_closes.keys() or tick not in splits.keys():
+                        self.update()
+                        return
 
-def update_cache():
-    # Function to update cached data
-    print('update cache')
-    if g.user:
+    def update(self):
+        cache.set('status','updating')
+        if g.user:
 
-        db = get_db()
-        df = pd.read_sql_query('''SELECT * FROM transactions WHERE user_id = ?''', db, params=(g.user['id'],))
+            db = get_db()
+            df = pd.read_sql_query('''SELECT * FROM transactions WHERE user_id = ?''', db, params=(g.user['id'],))
 
-        prices = {}
-        previous_closes = {}
-        splits = {}
+            if len(df) > 0:
+                prices = {}
+                previous_closes = {}
+                splits = {}
 
-        # cache info for each symbol
-        for tick in df['symbol'].unique():
-            info = yf.Ticker(tick)
-            prices[tick] = round(info.fast_info.last_price,2)
-            previous_closes[tick] = round(info.fast_info.regular_market_previous_close,2)
-            splits[tick] = info.splits
-        cache.set("prices", prices)
-        cache.set("previous_closes", previous_closes)
-        cache.set('splits',splits)
+                # cache info for each symbol
+                for tick in df['symbol'].unique():
+                    info = yf.Ticker(tick)
+                    prices[tick] = round(info.fast_info.last_price,2)
+                    previous_closes[tick] = round(info.fast_info.regular_market_previous_close,2)
+                    splits[tick] = info.splits
+                cache.set("prices", prices)
+                cache.set("previous_closes", previous_closes)
+                cache.set('splits',splits)
 
-        # cache historical data for each symbol
-        tickers=yf.Tickers(' '.join(df['symbol'].unique()))
-        history = tickers.history(start=min(df['tran_date']),end=datetime.today().strftime('%Y-%m-%d'),period=None)
-        history=history['Close']
-        cache.set('history',history)
+                # cache historical data for each symbol
+                tickers=yf.Tickers(' '.join(df['symbol'].unique()))
+                history = tickers.history(start=min(df['tran_date']),end=datetime.today().strftime('%Y-%m-%d'),period=None)
+                history=history['Close']
+                cache.set('history',history)
 
-        # handle splits and cache recomputed transactions
-        df['tran_date']=df['tran_date'].apply(pd.Timestamp)
-        for ind, row in df.iterrows():
-            try:
-                s=splits[row['symbol']]
-                s.index=s.index.tz_localize(None)
-                mult = np.cumprod(s[s.index > row['tran_date']]).values[-1]
-                df.loc[ind,'quantity'] = row['quantity']*mult
-                df.loc[ind,'share_price'] = row['share_price']/mult
-            except:
-                pass
-        cache.set('transactions_df',df)
+                # handle splits and cache recomputed transactions
+                df['tran_date']=df['tran_date'].apply(pd.Timestamp)
+                for ind, row in df.iterrows():
+                    try:
+                        s=splits[row['symbol']]
+                        s.index=s.index.tz_localize(None)
+                        mult = np.cumprod(s[s.index > row['tran_date']]).values[-1]
+                        df.loc[ind,'quantity'] = row['quantity']*mult
+                        df.loc[ind,'share_price'] = row['share_price']/mult
+                    except:
+                        pass
+                cache.set('transactions_df',df)
+                cache.set('update_needed', False)
+            else:
+                cache.set("prices", {})
+                cache.set("previous_closes", {})
+                cache.set('splits',{})
+                cache.set('history',None)
+                cache.set('transactions_df',None)
+
+        cache.set('status','')
+
+    def wait(self):
+        while True:
+            if cache.get('status') == '':
+                break
+            else:
+                time.sleep(.1)
+
+CacheController = CacheControl(cache)
 
 def color_positive_green(val):
     if isinstance(val, (int, float)):
@@ -95,13 +129,13 @@ def color_positive_green(val):
 
 def get_positions_table():
     if g.user:
-        if check_cache(): # update cache if needed
-            update_cache()
+        CacheController()
         
-            prices = cache.get('prices')
-            previous_closes = cache.get('previous_closes')
-            transactions_df = cache.get('transactions_df')
+        prices = cache.get('prices')
+        previous_closes = cache.get('previous_closes')
+        transactions_df = cache.get('transactions_df')
 
+        if isinstance(transactions_df, pd.DataFrame):
             transactions_df['cost_basis']=transactions_df['quantity']*transactions_df['share_price']
             positions = transactions_df.groupby('symbol',as_index=False).agg({'quantity':'sum', 'cost_basis':'sum'})
             positions['cost_basis']=positions['cost_basis'].apply(lambda x: round(x,2))
@@ -119,7 +153,7 @@ def get_positions_table():
             positions.sort_values('Mkt Val',ascending=False,inplace=True)
 
             styles = [
-                dict(selector="th", props=[("font-size", "12px")]) # Adjust "16px" as needed
+                dict(selector="th", props=[("font-size", "12px")]) 
             ]
 
             html = (
@@ -135,48 +169,48 @@ def get_positions_table():
                 .to_html()
             )
             cache.set('positions_table',html)
-        
-        html = cache.get('positions_table')
-        return html
+            
+            html = cache.get('positions_table')
+            return html
+        else:
+            return ''
 
 def get_history_graph(timeframe):
     if g.user:
-        if check_cache(): # update cache if needed
-            update_cache()
+        CacheController()
 
-        value_history = cache.get('value_history')
-        if not isinstance(value_history, pd.DataFrame):
-            history = cache.get('history')
-            df = cache.get('transactions_df')
-            print(df)
-            if len(df) > 0:
-                #history = get_historical()
-                trades=df.groupby(['tran_date','symbol'],as_index=False).agg({'quantity':'sum'})
-                trades['tran_date']=pd.DatetimeIndex(trades['tran_date'])
-                trades=trades.pivot(columns='symbol',index='tran_date')
-                qhistory=pd.DataFrame(index=history.index).merge(trades['quantity'],left_index=True, right_index=True,how='outer')
-                qhistory=qhistory.fillna(0).cumsum(axis=0)
-                qhistory=qhistory[qhistory.index.isin(history.index)]
-                value_history=pd.DataFrame((history*qhistory).sum(axis=1), columns=['value'])
-                cache.set('value_history',value_history)
+        history = cache.get('history')
+        df = cache.get('transactions_df')
+        if isinstance(df, pd.DataFrame):
+            trades=df.groupby(['tran_date','symbol'],as_index=False).agg({'quantity':'sum'})
+            trades['tran_date']=pd.DatetimeIndex(trades['tran_date'])
+            trades=trades.pivot(columns='symbol',index='tran_date')
+            qhistory=pd.DataFrame(index=history.index).merge(trades['quantity'],left_index=True, right_index=True,how='outer')
+            qhistory=qhistory.fillna(0).cumsum(axis=0)
+            qhistory=qhistory[qhistory.index.isin(history.index)]
+            value_history=pd.DataFrame((history*qhistory).sum(axis=1), columns=['value'])
+            cache.set('value_history',value_history)
 
-        if timeframe:
-            try:
-                value_history = value_history[value_history.index >= datetime.today()-timedelta(days=int(timeframe))]
-            except:
-                pass
+            if timeframe:
+                try:
+                    value_history = value_history[value_history.index >= datetime.today()-timedelta(days=int(timeframe))]
+                except:
+                    pass
 
-        fig = go.Figure()
-        fig.add_trace(go.Scatter(
-            x=value_history.index,
-            y=value_history['value'],
-            mode='lines',
-            name='Solid Line',
-            line=dict(
-                color='green',  
-                width=2,       
-                dash='solid'   
-            )
-        ))
-        fig.update_layout(template='plotly_white', margin=dict(l=20, r=20, t=20, b=20), autosize=True, height=275)
-        return fig.to_html(config={'displayModeBar': False, 'editable':False, 'responsive':True}, full_html=False)
+            value_history['value']=pd.to_numeric(value_history['value'])
+            fig = go.Figure()
+            fig.add_trace(go.Scatter(
+                x=value_history.index,
+                y=value_history['value'].astype(float).values.tolist(),
+                mode='lines',
+                name='Solid Line',
+                line=dict(
+                    color='green',  
+                    width=2,       
+                    dash='solid'   
+                )
+            ))
+            fig.update_layout(template='plotly_white', margin=dict(l=20, r=20, t=20, b=20), autosize=True, height=275)
+            return fig.to_json()
+        else:
+            return Response(status=204)

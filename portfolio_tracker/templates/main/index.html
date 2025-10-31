@@ -6,6 +6,7 @@
 
 {% block content %}
   {% if g.user %}
+
   <div class="container-fluid">
     <div class="row justify-content-center">
       
@@ -14,15 +15,61 @@
         <div class="card mb-3 mt-3" >
           <div class="card-body" >
             <h5 class="card-title">Historical Portfolio Value</h5>
-            <div class="btn-group btn-group-toggle" role="group" data-toggle="buttons">
-              <a class="btn btn-sm btn-outline-secondary {% if request.args.get('tf') == '30' %} active {% endif %}" href="{{ url_for('main.index', tf=30) }}" role="button">1 Mo</a>
-              <a class="btn btn-sm btn-outline-secondary {% if request.args.get('tf') == '91' %} active {% endif %}" href="{{ url_for('main.index', tf=91) }}" role="button">3 Mo</a>
-              <a class="btn btn-sm btn-outline-secondary {% if request.args.get('tf') == '182' %} active {% endif %}" href="{{ url_for('main.index', tf=182) }}" role="button">6 Mo</a>
-              <a class="btn btn-sm btn-outline-secondary {% if request.args.get('tf') == '365' %} active {% endif %}" href="{{ url_for('main.index', tf=365) }}" role="button">1 Yr</a>
-              <a class="btn btn-sm btn-outline-secondary {% if request.args.get('tf') == '1095' %} active {% endif %}" href="{{ url_for('main.index', tf=1095) }}" role="button">3 Yr</a>
-              <a class="btn btn-sm btn-outline-secondary {% if request.args.get('tf') == None %} active {% endif %}" href="{{ url_for('main.index') }}" role="button">All</a>
+            <div class="btn-group" role="group">
+              <button id = "30dbtn" class="btn btn-sm btn-outline-secondary" onclick = "getHistory('30')" role="button">1 Mo</button>
+              <button class="btn btn-sm btn-outline-secondary" onclick = "getHistory('91')" role="button">3 Mo</button>
+              <button class="btn btn-sm btn-outline-secondary" onclick = "getHistory('182')" role="button">6 Mo</button>
+              <button class="btn btn-sm btn-outline-secondary" onclick = "getHistory('365')" role="button">1 Yr</button>
+              <button class="btn btn-sm btn-outline-secondary" onclick = "getHistory('1095')" role="button">3 Yr</button>
+              <button class="btn btn-sm btn-outline-secondary active" onclick = "getHistory('')" role="button">All</button>
             </div>
-            {{ graph|safe }}
+            <!-- {{ graph|safe }} -->
+            <div id="history-graph">Loading...</div>
+            <script>
+              function getHistory(tf) {
+                
+                const url = "{{ url_for('main.history_endpoint') }}?tf="+tf;
+                var config = {
+                    displayModeBar: false
+                };
+                var layout = {
+                  title: {
+                      text: 'Hide the Modebar'
+                  }
+                }
+
+                fetch(url)
+                    .then(resp => {
+                      if (resp.status == 204) {
+                        console.log('no content');
+                        document.getElementById('history-graph').innerText = '';
+                      } else if (resp.ok) {
+                        return resp.json();
+                      } else {
+                        throw new Error(`HTTP error! status: ${resp.status}`);
+                      }
+                    })
+                    .then(data => {
+                      document.getElementById('history-graph').innerText = '';
+                      if (!data) return;
+                      var config = {displayModeBar: false};
+                      Plotly.setPlotConfig(config);
+                      Plotly.newPlot('history-graph', data, {}, config);
+                    })
+              };
+              document.addEventListener('DOMContentLoaded', getHistory);
+            </script>
+             <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+            <script> src="../../js/btn-click.js"
+              $(document).ready(function() {
+              $(".btn-group > .btn").click(function() {
+                  // Remove 'active' class from all buttons in the group
+                  $(this).siblings().removeClass("active");
+                  // Add 'active' class to the clicked button
+                  $(this).addClass("active");
+              });
+              });
+            </script>
           </div>
         </div>
       </div>
@@ -39,7 +86,28 @@
         <div class="card">
           <div class="card-body">
             <h5 class="card-title">Positions</h5>
-            {{ table|safe }}
+            <div id="positions-table">Loading...</div>
+            <script>
+              document.addEventListener('DOMContentLoaded', function() {
+                fetch("{{ url_for('main.positions_endpoint') }}")
+                    .then(response => {
+                          if (!response.ok) {
+                              throw new Error('Network response was not ok');
+                          }
+                          return response.text(); 
+                      })
+                    .then(htmlContent => {
+                        const targetElement = document.getElementById('positions-table');
+                        if (targetElement) {
+                            targetElement.innerHTML = htmlContent; 
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error fetching HTML:', error);
+                    });
+              });
+            </script>
+            <!-- {{ table|safe }} -->
           </div>
         </div>
       </div>
@@ -50,5 +118,20 @@
 
     </div>
   </div>
+
+  {% else %}
+
+
+  <h1 class="text-center p-5 m-3">Portfolio Tracker</h1>
+  <div class="container-fluid"> 
+      <!-- <div class="btn-toolbar align-items-center"> -->
+        <div class="row justify-content-center">
+        <a href="{{ url_for('auth.register') }}" class="btn btn-primary equal-width-btn">Create Account</a>
+        <a href="{{ url_for('auth.login') }}" class="btn btn-primary equal-width-btn">Log In</a>
+        </div>
+      <!-- </div> -->
+    </div>
+
+
   {% endif %}
 {% endblock %} 

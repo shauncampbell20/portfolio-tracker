@@ -28,3 +28,7 @@
   border: 1px solid #bee5eb;
 }
 
+.equal-width-btn {
+        width: 180px; 
+        margin: 10px;
+    }

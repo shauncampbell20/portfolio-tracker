@@ -1,6 +1,7 @@
 from werkzeug.exceptions import abort
 from portfolio_tracker.auth import login_required
 from portfolio_tracker.db import get_db
+from portfolio_tracker import cache
 import pandas as pd
 import yfinance as yf
 from flask import (
@@ -45,7 +46,8 @@ def enter():
             db.commit()    
             flash('Transaction Saved','success')
             tran = {}
-            
+            cache.set('update_needed',True)
+
         else:
             flash(error,'error')
 
@@ -68,6 +70,7 @@ def delete(tran_id):
     db.execute('''DELETE FROM transactions WHERE id = ?''', (tran_id,))
     db.commit()
     flash('Transaction deleted','success')
+    cache.set('update_needed',True)
     return redirect(url_for('transactions.view'))
 
 @bp.route('/edit/<tran_id>', methods=('GET', 'POST'))
@@ -106,6 +109,7 @@ def edit(tran_id):
             WHERE id = ? ''', (tran_date, symbol, quantity, share_price, tran_id))
             db.commit()    
             flash('Transaction Updated','success')
+            cache.set('update_needed',True)
             return redirect(url_for('transactions.view'))
             
         else:

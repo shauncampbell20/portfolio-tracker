@@ -1,5 +1,5 @@
 from flask import (
-    Blueprint, flash, g, redirect, render_template, request, url_for
+    Blueprint, flash, g, redirect, render_template, request, url_for, jsonify
 )
 
 from werkzeug.exceptions import abort
@@ -12,16 +12,12 @@ bp = Blueprint('main', __name__)
 
 @bp.route('/', methods=('GET', 'POST'))
 def index(tf=None):
+    return render_template('main/index.html')
+
+@bp.route('/history', methods=('GET','POST'))
+def history_endpoint():
     timeframe = request.args.get('tf')
-    # Render main index
-    positions_table = None
-    history_graph = None
-    if g.user:
-        db = get_db()
-        #df = pd.read_sql_query('''SELECT * FROM transactions WHERE user_id = ?''', db, params=(g.user['id'],))
-        positions_table = get_positions_table()
-        history_graph = get_history_graph(timeframe)
-    return render_template('main/index.html',table=positions_table, graph=history_graph)
+    return get_history_graph(timeframe)
 
 @bp.route('/positions', methods=('GET','POST'))
 def positions_endpoint():

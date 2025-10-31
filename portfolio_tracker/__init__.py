@@ -1,7 +1,9 @@
 import os
 from flask import Flask 
-#from flask_caching import Cache
-from portfolio_tracker.helpers import cache
+from flask_caching import Cache
+#from portfolio_tracker.helpers import cache
+
+cache = Cache()
 
 def create_app(test_config=None):
     # create and configure the app
