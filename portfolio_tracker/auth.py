@@ -14,6 +14,7 @@ def register():
     '''Register with username and password.
     A unique username and password >= 8 characters is required
     '''
+    username=''
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
@@ -45,7 +46,7 @@ def register():
 
         flash(error,'error')
 
-    return render_template('auth/register.html')
+    return render_template('auth/register.html', username=username)
 
 @bp.route('/login', methods=('GET','POST'))
 def login():
