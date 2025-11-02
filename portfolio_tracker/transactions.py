@@ -61,7 +61,7 @@ def view():
     '''
     db = get_db()
     df = pd.read_sql_query('''SELECT * FROM transactions WHERE user_id = ?''', db, params=(g.user['id'],))
-    trans = df.sort_values('tran_date')
+    trans = df.sort_values('tran_date', ascending=False)
     trans['tran_date'] = trans['tran_date'].apply(lambda x: pd.Timestamp(x).strftime('%m/%d/%Y'))
     trans = trans.to_dict('records')
     return render_template('transactions/view.html', trans=trans)
