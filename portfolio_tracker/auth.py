@@ -17,6 +17,7 @@ def register():
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
+        password2 = request.form['password2']
         db = get_db()
         error = ''
 
@@ -26,7 +27,9 @@ def register():
             error = 'Password is required.'
         elif len(password) < 8:
             error = 'Password must be at least 8 characters long. '
-
+        elif password != password2:
+            error = 'Passwords do not match.'
+        
         if error == '':
             try:
                 db.execute(
