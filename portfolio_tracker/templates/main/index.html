@@ -6,7 +6,7 @@
 
 {% block content %}
   {% if g.user %}
-
+  <!-- User logged in -->
   <div class="container-fluid">
     <div class="row justify-content-center">
       
@@ -15,6 +15,7 @@
         <div class="card mb-3 mt-3" >
           <div class="card-body" >
             <h5 class="card-title">Historical Portfolio Value</h5>
+            <!-- Time range buttons -->
             <div class="btn-group" role="group">
               <button id = "30dbtn" class="btn btn-sm btn-outline-secondary" onclick = "getHistory('30')" role="button">1 Mo</button>
               <button class="btn btn-sm btn-outline-secondary" onclick = "getHistory('91')" role="button">3 Mo</button>
@@ -23,21 +24,13 @@
               <button class="btn btn-sm btn-outline-secondary" onclick = "getHistory('1095')" role="button">3 Yr</button>
               <button class="btn btn-sm btn-outline-secondary active" onclick = "getHistory('')" role="button">All</button>
             </div>
-            <!-- {{ graph|safe }} -->
+
+            <!-- History graph -->
             <div id="history-graph">Loading...</div>
             <script>
               function getHistory(tf) {
-                
+                // function to get graph with fetch and render with Plotly
                 const url = "{{ url_for('main.history_endpoint') }}?tf="+tf;
-                var config = {
-                    displayModeBar: false
-                };
-                var layout = {
-                  title: {
-                      text: 'Hide the Modebar'
-                  }
-                }
-
                 fetch(url)
                     .then(resp => {
                       if (resp.status == 204) {
@@ -59,15 +52,16 @@
               };
               document.addEventListener('DOMContentLoaded', getHistory);
             </script>
-             <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
-            <script> src="../../js/btn-click.js"
+
+            <!-- Button group script -->
+            <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+            <script> 
               $(document).ready(function() {
-              $(".btn-group > .btn").click(function() {
-                  // Remove 'active' class from all buttons in the group
-                  $(this).siblings().removeClass("active");
-                  // Add 'active' class to the clicked button
-                  $(this).addClass("active");
-              });
+                // Function to set active/inactive button classes
+                $(".btn-group > .btn").click(function() {
+                    $(this).siblings().removeClass("active");
+                    $(this).addClass("active");
+                });
               });
             </script>
           </div>
@@ -89,6 +83,7 @@
             <div id="positions-table">Loading...</div>
             <script>
               document.addEventListener('DOMContentLoaded', function() {
+                // Function to get positions table with fetch and render HTML
                 fetch("{{ url_for('main.positions_endpoint') }}")
                     .then(response => {
                           if (!response.ok) {
@@ -107,7 +102,6 @@
                     });
               });
             </script>
-            <!-- {{ table|safe }} -->
           </div>
         </div>
       </div>
@@ -120,18 +114,15 @@
   </div>
 
   {% else %}
-
+  <!-- No user logged in -->
 
   <h1 class="text-center p-5 m-3">Portfolio Tracker</h1>
   <div class="container-fluid"> 
-      <!-- <div class="btn-toolbar align-items-center"> -->
         <div class="row justify-content-center">
-        <a href="{{ url_for('auth.register') }}" class="btn btn-primary equal-width-btn">Create Account</a>
-        <a href="{{ url_for('auth.login') }}" class="btn btn-primary equal-width-btn">Log In</a>
+          <a href="{{ url_for('auth.register') }}" class="btn btn-primary equal-width-btn">Create Account</a>
+          <a href="{{ url_for('auth.login') }}" class="btn btn-primary equal-width-btn">Log In</a>
         </div>
-      <!-- </div> -->
     </div>
-
 
   {% endif %}
 {% endblock %} 

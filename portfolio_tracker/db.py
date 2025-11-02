@@ -5,7 +5,8 @@ from flask import current_app, g
 from werkzeug.security import check_password_hash, generate_password_hash
 
 def get_db():
-    # Get and return a database connection
+    '''Get and return a database connection
+    '''
     if 'db' not in g:
         g.db = sqlite3.connect(
             current_app.config['DATABASE'],
@@ -17,14 +18,16 @@ def get_db():
 
 
 def close_db(e=None):
-    # Close database connection
+    '''Close database connection
+    '''
     db = g.pop('db', None)
 
     if db is not None:
         db.close()
 
 def init_db():
-    # Initialize the database tables
+    '''Initialize the database tables
+    '''
     db = get_db()
 
     with current_app.open_resource('schema.sql') as f:
@@ -38,7 +41,8 @@ def init_db():
 
 @click.command('init-db')
 def init_db_command():
-    # Clear the existing data and create new tables
+    '''Clear the existing data and create new tables
+    '''
     init_db()
     click.echo('Initialized the database.')
 

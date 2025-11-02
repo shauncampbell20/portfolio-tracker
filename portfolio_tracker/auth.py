@@ -2,6 +2,7 @@ import functools
 import re
 from werkzeug.security import check_password_hash, generate_password_hash
 from portfolio_tracker.db import get_db
+from portfolio_tracker import cache
 from flask import (
     Blueprint, flash, g, redirect, render_template, request, session, url_for
 )
@@ -10,8 +11,9 @@ bp = Blueprint('auth', __name__, url_prefix='/auth')
 
 @bp.route('/register', methods=('GET','POST'))
 def register():
-    # Register with username and password
-    # unique username and password >= 8 characters is required
+    '''Register with username and password.
+    A unique username and password >= 8 characters is required
+    '''
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
@@ -44,8 +46,9 @@ def register():
 
 @bp.route('/login', methods=('GET','POST'))
 def login():
-    # Log in with username and password
-    # Username must exist in the database and password (hash) must match
+    '''Log in with username and password.
+    Username must exist in the database and password (hash) must match.
+    '''
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
@@ -63,7 +66,7 @@ def login():
         if error is None:
             session.clear()
             session['user_id'] = user['id']
-            #flash('Login successful!','success')
+            cache.set('update_needed',True)
             return redirect(url_for('index'))
 
         flash(error,'error')
@@ -72,7 +75,8 @@ def login():
 
 @bp.before_app_request
 def load_logged_in_user():
-    # Set global user information
+    '''Set global user information
+    '''
     user_id = session.get('user_id')
 
     if user_id is None:
@@ -84,12 +88,14 @@ def load_logged_in_user():
 
 @bp.route('/logout')
 def logout():
-    # Clear session to log out
+    '''Clear session to log out
+    '''
     session.clear()
     return redirect(url_for('main.index'))
 
 def login_required(view):
-    # wrapper to require login for certain functions
+    '''Wrapper to require login for certain functions
+    '''
     @functools.wraps(view)
     def wrapped_view(**kwargs):
         if g.user is None:

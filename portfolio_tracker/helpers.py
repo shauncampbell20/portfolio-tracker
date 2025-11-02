@@ -1,5 +1,4 @@
 import yfinance as yf
-#from flask_caching import Cache
 import numpy as np
 import pandas as pd
 from portfolio_tracker.db import get_db
@@ -12,22 +11,31 @@ import time
 
 
 class CacheControl:
+    '''Class to facilitate updating cached data
+    '''
     def __init__(self, cache):
         cache.set('status','')
 
     def __call__(self):
+        '''Run check method if class is called
+        '''
         self.check()
 
     def check(self):
+        '''Method to check the cache and database to see if an update 
+        is needed
+        '''
         if cache.get('status') == 'updating':
             self.wait()
         else:
             if g.user:
-        
+                
+                # Check for triggered update
                 if cache.get('update_needed'):
                     self.update()
+                    return
 
-                # Load from cache
+                # Check cache for presence of data elements
                 prices = cache.get('prices')
                 if not prices:
                     self.update()
@@ -48,15 +56,18 @@ class CacheControl:
                 if not isinstance(history, pd.DataFrame):
                     self.update()
                     return
+                
+                # Check database for new tickers
                 db = get_db()
                 df = pd.read_sql_query('''SELECT * FROM transactions WHERE user_id = ?''', db, params=(g.user['id'],))
-                
                 for tick in df['symbol'].unique():
                     if tick not in prices.keys() or tick not in previous_closes.keys() or tick not in splits.keys():
                         self.update()
                         return
 
     def update(self):
+        '''Method to update cached data
+        '''
         cache.set('status','updating')
         if g.user:
 
@@ -107,6 +118,8 @@ class CacheControl:
         cache.set('status','')
 
     def wait(self):
+        '''Method to wait for update to finish 
+        '''
         while True:
             if cache.get('status') == '':
                 break
@@ -116,6 +129,8 @@ class CacheControl:
 CacheController = CacheControl(cache)
 
 def color_positive_green(val):
+    '''Return color style based on val
+    '''
     if isinstance(val, (int, float)):
         if val > 0:
             color = 'green'
@@ -128,6 +143,8 @@ def color_positive_green(val):
     return f'color: {color}'
 
 def get_positions_table():
+    '''Calculate and format the user's table of positions
+    '''
     if g.user:
         CacheController()
         
@@ -176,6 +193,8 @@ def get_positions_table():
             return ''
 
 def get_history_graph(timeframe):
+    '''Calculate and format the user's portfolio history graph
+    '''
     if g.user:
         CacheController()
 

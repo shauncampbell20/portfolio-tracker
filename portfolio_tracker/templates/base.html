@@ -8,6 +8,7 @@
     <link href="{{ url_for('static', filename='style.css') }}" rel="stylesheet">
   </head>
   <body class="bg-body-tertiary">
+    <!-- Navbar -->
     <nav class="navbar sticky-top navbar-expand-lg navbar-light bg-light border bg-white">
       <ul class="nav ">
         <li class="nav-item">
@@ -15,28 +16,33 @@
         </li>
       </ul>
       <ul class="nav nav-fill ms-auto justify-content-end">
-      {% if g.user %}
-      <li class="nav-item dropdown">
-          <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="#" role="button" aria-expanded="false">Transactions</a>
-          <ul class="dropdown-menu dropdown-menu-">
-            <li><a class="dropdown-item" href="{{ url_for('transactions.enter') }}">Enter</a></li>
-            <li><a class="dropdown-item" href="{{ url_for('transactions.view') }}">Edit/Delete</a></li>
-          </ul>
-      </li>
-      <li class="nav-item dropdown">
-          <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="#" role="button" aria-expanded="false">{{ g.user['username'] }}</a>
-          <ul class="dropdown-menu dropdown-menu-end">
-            <li><a class="dropdown-item" href="{{ url_for('auth.logout') }}">Log Out</a></li>
-          </ul>
-      </li>
-      {% else %}
-      <li class="nav-item">
-          <a class="nav-link {% if request.path == url_for('auth.register') %} active {% endif %}" href="{{ url_for('auth.register') }}">Create Account</a>
-      </li>
-      <li class="nav-item">
-          <a class="nav-link {% if request.path == url_for('auth.login') %} active {% endif %}" href="{{ url_for('auth.login') }}">Log In</a>
-      </li>
-      {% endif %}
+
+        {% if g.user %}
+        <!-- User logged in -->
+        <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="#" role="button" aria-expanded="false">Transactions</a>
+            <ul class="dropdown-menu dropdown-menu-">
+              <li><a class="dropdown-item" href="{{ url_for('transactions.enter') }}">Enter</a></li>
+              <li><a class="dropdown-item" href="{{ url_for('transactions.view') }}">Edit/Delete</a></li>
+            </ul>
+        </li>
+        <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="#" role="button" aria-expanded="false">{{ g.user['username'] }}</a>
+            <ul class="dropdown-menu dropdown-menu-end">
+              <li><a class="dropdown-item" href="{{ url_for('auth.logout') }}">Log Out</a></li>
+            </ul>
+        </li>
+
+        {% else %}
+        <!-- No user logged in -->
+        <li class="nav-item">
+            <a class="nav-link {% if request.path == url_for('auth.register') %} active {% endif %}" href="{{ url_for('auth.register') }}">Create Account</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link {% if request.path == url_for('auth.login') %} active {% endif %}" href="{{ url_for('auth.login') }}">Log In</a>
+        </li>
+        {% endif %}
+        
       </ul>
     </nav>
     <header>
