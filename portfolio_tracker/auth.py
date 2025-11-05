@@ -3,7 +3,6 @@ import re
 from werkzeug.security import check_password_hash, generate_password_hash
 from portfolio_tracker.db import get_db
 from portfolio_tracker import cache
-from portfolio_tracker.helpers import calculate_positions
 from flask import (
     Blueprint, flash, g, redirect, render_template, request, session, url_for
 )
@@ -73,7 +72,6 @@ def login():
             session['user_id'] = user['id']
             cache.set('status','')
             cache.set('updates_needed',['transactions','info','history'])
-            calculate_positions()
             return redirect(url_for('index'))
 
         flash(error,'error')

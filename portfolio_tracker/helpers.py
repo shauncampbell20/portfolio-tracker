@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 import plotly.express as px
 import plotly.graph_objects as go
 import time
-
+import functools
 
 class CacheControl:
     '''Class to facilitate updating cached data
@@ -23,18 +23,19 @@ class CacheControl:
         self.check()
 
     def check(self):
-        '''Method to check the cache and database to see if an update 
-        is needed
+        '''Check to see if updates are needed
         '''
         if cache.get('status') == 'updating':
             self.wait()
         else:
             if g.user:
                 
-                # Check for triggered update
+                # Check for updates
                 updates_needed = cache.get('updates_needed')
+                if updates_needed == None:
+                    updates_needed = ['transactions','info','history']
                 print(updates_needed)
-                if len('updates_needed') > 0:
+                if len(updates_needed) > 0:
                     cache.set('status','updating')
                     db = get_db()
                     self.df = pd.read_sql_query('''SELECT * FROM transactions WHERE user_id = ?''', db, params=(g.user['id'],))
@@ -48,36 +49,9 @@ class CacheControl:
                     cache.set('updates_needed',[])
                     cache.set('status','')
 
-                # # Check cache for presence of data elements
-                # prices = cache.get('prices')
-                # if not prices:
-                #     self.update()
-                #     return
-                # previous_closes = cache.get('previous_closes')
-                # if not previous_closes:
-                #     self.update()
-                #     return
-                # splits = cache.get('splits')
-                # if not splits:
-                #     self.update()
-                #     return
-                # # transactions_df = cache.get('transactions_df')
-                # # if not isinstance(transactions_df, pd.DataFrame):
-                # #     self.update()
-                # #     return
-                # history = cache.get('history')
-                # if not isinstance(history, pd.DataFrame):
-                #     self.update()
-                #     return
-                
-                # # Check database for new tickers
-                # db = get_db()
-                # df = pd.read_sql_query('''SELECT * FROM transactions WHERE user_id = ?''', db, params=(g.user['id'],))
-                # for tick in df['symbol'].unique():
-                #     if tick not in prices.keys() or tick not in previous_closes.keys() or tick not in splits.keys():
-                #         self.update()
-                #         return
     def update_info(self):
+        '''Update info (prices, previous closes, splits)
+        '''
         if len(self.df) > 0:
             prices = {}
             previous_closes = {}
@@ -86,13 +60,15 @@ class CacheControl:
             for tick in self.df['symbol'].unique():
                 info = yf.Ticker(tick)
                 prices[tick] = round(info.fast_info.last_price,2)
-                previous_closes[tick] = round(info.fast_info.regular_market_previous_close,2)
+                previous_closes[tick] = round(info.fast_info.previous_close,2)
                 splits[tick] = info.splits
             cache.set("prices", prices)
             cache.set("previous_closes", previous_closes)
             cache.set('splits',splits)
 
     def update_history(self):
+        '''Update price history
+        '''
         if len(self.df) > 0:
             tickers=yf.Tickers(' '.join(self.df['symbol'].unique()))
             history = tickers.history(start=min(self.df['tran_date']),end=datetime.today().strftime('%Y-%m-%d'),period=None)
@@ -100,9 +76,11 @@ class CacheControl:
             cache.set('history',history)
 
     def update_transactions(self):
-        # handle splits and cache recomputed transactions
+        '''Handle splits and cache recomputed transactions
+        '''
         if len(self.df) > 0:
             df = self.df.copy()
+            splits = cache.get('splits')
             df['tran_date']=df['tran_date'].apply(pd.Timestamp)
             for ind, row in df.iterrows():
                 try:
@@ -116,8 +94,11 @@ class CacheControl:
             cache.set('transactions_df',df)
 
     def update_positions(self):
+        '''Update positions table for user
+        '''
+
+        # calculate positions
         transactions_df = cache.get('transactions_df')
-        db=get_db()
         positions = {}
         for row in transactions_df.values:
             symb = row[3]
@@ -140,13 +121,12 @@ class CacheControl:
                 if shares_to_sell != 0:
                     raise ValueError('Not enough shares to sell')
         
+        # update database
+        db=get_db()
         db.execute('''DELETE FROM positions WHERE user_id = ? ''', (g.user['id'],))
         db.commit()
         for symb in positions.keys():
-            q = 0
-            cb = 0
-            rcb = 0
-            rv = 0
+            q = 0; cb = 0; rcb = 0; rv = 0
             for ur in positions[symb]['ur']:
                 q += ur[0]
                 cb += ur[0]*ur[1]
@@ -159,58 +139,6 @@ class CacheControl:
                     (g.user['id'], symb, q, cb, rcb, rv),
             )
             db.commit()
-
-    def update(self):
-        '''Method to update cached data
-        '''
-        cache.set('status','updating')
-        if g.user:
-
-            db = get_db()
-            df = pd.read_sql_query('''SELECT * FROM transactions WHERE user_id = ?''', db, params=(g.user['id'],))
-
-            if len(df) > 0:
-                prices = {}
-                previous_closes = {}
-                splits = {}
-
-                # cache info for each symbol
-                for tick in df['symbol'].unique():
-                    info = yf.Ticker(tick)
-                    prices[tick] = round(info.fast_info.last_price,2)
-                    previous_closes[tick] = round(info.fast_info.regular_market_previous_close,2)
-                    splits[tick] = info.splits
-                cache.set("prices", prices)
-                cache.set("previous_closes", previous_closes)
-                cache.set('splits',splits)
-
-                # cache historical data for each symbol
-                tickers=yf.Tickers(' '.join(df['symbol'].unique()))
-                history = tickers.history(start=min(df['tran_date']),end=datetime.today().strftime('%Y-%m-%d'),period=None)
-                history=history['Close']
-                cache.set('history',history)
-
-                # # handle splits and cache recomputed transactions
-                # df['tran_date']=df['tran_date'].apply(pd.Timestamp)
-                # for ind, row in df.iterrows():
-                #     try:
-                #         s=splits[row['symbol']]
-                #         s.index=s.index.tz_localize(None)
-                #         mult = np.cumprod(s[s.index > row['tran_date']]).values[-1]
-                #         df.loc[ind,'quantity'] = row['quantity']*mult
-                #         df.loc[ind,'share_price'] = row['share_price']/mult
-                #     except:
-                #         pass
-                # cache.set('transactions_df',df)
-                cache.set('update_needed', False)
-            else:
-                cache.set("prices", {})
-                cache.set("previous_closes", {})
-                cache.set('splits',{})
-                cache.set('history',None)
-                cache.set('transactions_df',None)
-
-        cache.set('status','')
 
     def wait(self):
         '''Method to wait for update to finish 
@@ -222,71 +150,6 @@ class CacheControl:
                 time.sleep(.1)
 
 CacheController = CacheControl(cache)
-
-def handle_splits(df):
-    # handle splits and cache recomputed transactions
-    splits = cache.get('splits')
-    df['tran_date']=df['tran_date'].apply(pd.Timestamp)
-    for ind, row in df.iterrows():
-        try:
-            s=splits[row['symbol']]
-            s.index=s.index.tz_localize(None)
-            mult = np.cumprod(s[s.index > row['tran_date']]).values[-1]
-            df.loc[ind,'quantity'] = row['quantity']*mult
-            df.loc[ind,'share_price'] = row['share_price']/mult
-        except:
-            pass
-    return df
-
-def calculate_positions():
-    if g.user:
-        CacheController()
-
-        db = get_db()
-        df = pd.read_sql_query('''SELECT * FROM transactions WHERE user_id = ?''', db, params=(g.user['id'],))
-        transactions_df = handle_splits(df)
-
-        positions = {}
-        for row in transactions_df.values:
-            symb = row[3]
-            if symb not in positions.keys():
-                positions[symb] = {'ur':[],'r':[]}
-            # BUY
-            if row[4] > 0:
-                positions[symb]['ur'].append([row[4],row[5]])
-                
-            # SELL
-            elif row[4] < 0:
-                shares_to_sell = -row[4]
-                for trade in positions[symb]['ur']:
-                    sold = min(shares_to_sell, trade[0])
-                    shares_to_sell -= sold
-                    trade[0] -= sold
-                    positions[symb]['r'].append([sold, sold*trade[1], sold*row[5]])
-                    if shares_to_sell == 0:
-                        break
-                if shares_to_sell != 0:
-                    raise ValueError('Not enough shares to sell')
-        
-        db.execute('''DELETE FROM positions WHERE user_id = ? ''', (g.user['id'],))
-        db.commit()
-        for symb in positions.keys():
-            q = 0
-            cb = 0
-            rcb = 0
-            rv = 0
-            for ur in positions[symb]['ur']:
-                q += ur[0]
-                cb += ur[0]*ur[1]
-            for r in positions[symb]['r']:
-                rcb += r[1]
-                rv += r[2]
-            db.execute(
-                    '''INSERT INTO positions (user_id, symbol, quantity, cost_basis, realized_cost_basis, realized_value) 
-                    VALUES (?, ?, ?, ?, ?, ?)''',
-                    (g.user['id'], symb, q, cb, rcb, rv),
-            )
-            db.commit()
 
 def color_positive_green(val):
     '''Return color style based on val
@@ -308,26 +171,27 @@ def get_positions_table():
     if g.user:
         CacheController()
         
-        db = get_db()
         prices = cache.get('prices')
         previous_closes = cache.get('previous_closes')
-        df = pd.read_sql_query('''SELECT * FROM transactions WHERE user_id = ?''', db, params=(g.user['id'],))
-        transactions_df = handle_splits(df)
-
-        if isinstance(transactions_df, pd.DataFrame):
-            transactions_df['cost_basis']=transactions_df['quantity']*transactions_df['share_price']
-            positions = transactions_df.groupby('symbol',as_index=False).agg({'quantity':'sum', 'cost_basis':'sum'})
+        #transactions_df = cache.get('transactions_df')
+        db = get_db()
+        positions = pd.read_sql_query('''SELECT * FROM positions WHERE user_id = ?''', db, params=(g.user['id'],))
+        if isinstance(positions, pd.DataFrame):
             positions['cost_basis']=positions['cost_basis'].apply(lambda x: round(x,2))
             positions['last_price']=positions['symbol'].map(prices)
             positions['mk_val']=(positions['last_price']*positions['quantity']).apply(lambda x: round(x,2))
             positions['previous_close'] = positions['symbol'].map(previous_closes)
             positions['previous_val']=positions['previous_close']*positions['quantity']
-            positions['gain_loss']=positions['mk_val']-positions['cost_basis']
-            positions['gain_loss_pct']=round(positions['gain_loss']/positions['cost_basis'],4)
             positions['daily_gain_loss']=positions['mk_val']-positions['previous_val']
             positions['daily_gain_loss_pct']=round(positions['daily_gain_loss']/positions['previous_val'],4)
-            positions.drop(['previous_val','previous_close'],axis=1,inplace=True)
-            positions.columns = ['Symbol','Qty','Cost Basis','Price','Mkt Val','Gain Loss $','Gain Loss %','Day Chng $','Day Chng %']
+            positions['daily_gain_loss_pct']=positions['daily_gain_loss_pct'].fillna(0)
+            positions['rlz_gain_loss']=positions['realized_value']-positions['realized_cost_basis']
+            positions['urlz_gain_loss']=positions['mk_val']-positions['cost_basis']
+            positions['tot_gain_loss']=positions['rlz_gain_loss']+positions['urlz_gain_loss']
+            positions['tot_cost_basis']=positions['cost_basis']+positions['realized_cost_basis']
+            positions['gain_loss_pct']=round(positions['tot_gain_loss']/positions['tot_cost_basis'],4)
+            positions.drop(['id','user_id','realized_cost_basis','realized_value','previous_val','previous_close','rlz_gain_loss','urlz_gain_loss','tot_cost_basis'],axis=1,inplace=True)
+            positions.columns = ['Symbol','Qty','Cost Basis','Price','Mkt Val','Day Chng $','Day Chng %','Gain Loss $','Gain Loss %']
             positions = positions[['Symbol','Qty','Price','Mkt Val','Day Chng $','Day Chng %','Cost Basis','Gain Loss $','Gain Loss %']]
             positions.sort_values('Mkt Val',ascending=False,inplace=True)
 
@@ -347,9 +211,7 @@ def get_positions_table():
                 .set_table_attributes('class="table table-hover table-sm"')
                 .to_html()
             )
-            cache.set('positions_table',html)
-            
-            html = cache.get('positions_table')
+
             return html
         else:
             return ''
@@ -360,12 +222,9 @@ def get_history_graph(timeframe):
     if g.user:
         CacheController()
 
-        db = get_db()
         history = cache.get('history')
-        df = pd.read_sql_query('''SELECT * FROM transactions WHERE user_id = ?''', db, params=(g.user['id'],))
-        transactions_df = handle_splits(df)
-        
-        #df = cache.get('transactions_df')
+        transactions_df = cache.get('transactions_df')
+
         if isinstance(transactions_df, pd.DataFrame):
             trades=transactions_df.groupby(['tran_date','symbol'],as_index=False).agg({'quantity':'sum'})
             trades['tran_date']=pd.DatetimeIndex(trades['tran_date'])
@@ -375,7 +234,7 @@ def get_history_graph(timeframe):
             qhistory=qhistory[qhistory.index.isin(history.index)]
             value_history=pd.DataFrame((history*qhistory).sum(axis=1), columns=['value'])
             cache.set('value_history',value_history)
-            print(value_history)
+
             if timeframe:
                 try:
                     value_history = value_history[value_history.index >= datetime.today()-timedelta(days=int(timeframe))]
