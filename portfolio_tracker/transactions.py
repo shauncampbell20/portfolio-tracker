@@ -2,6 +2,7 @@ from werkzeug.exceptions import abort
 from portfolio_tracker.auth import login_required
 from portfolio_tracker.db import get_db
 from portfolio_tracker import cache
+from portfolio_tracker.helpers import calculate_positions
 import pandas as pd
 import yfinance as yf
 from flask import (
@@ -9,6 +10,21 @@ from flask import (
 )
 
 bp = Blueprint('transactions', __name__, url_prefix='/transactions')
+
+def check_transaction(tran_type, symbol, tran_date):
+    db = get_db()
+    updates_needed = ['transactions']
+    if tran_type in ['enter','edit']:
+        symbols = db.execute('''SELECT DISTINCT symbol FROM transactions WHERE  user_id = ? ''', (g.user['id'],)).fetchall()
+        if symbol not in [s['symbol'] for s in symbols]:
+            updates_needed.extend(['info','history'])
+        else:
+            min_date = db.execute('''SELECT MIN(tran_date) as tran_date FROM transactions WHERE  user_id = ? ''', (g.user['id'],)).fetchone()
+            min_date = pd.Timestamp(min_date['tran_date'])
+            if pd.Timestamp(tran_date) < min_date:
+                updates_needed.append('history') 
+
+    cache.set('updates_needed',updates_needed)
 
 @bp.route('/enter', methods=('GET','POST'))
 @login_required
@@ -18,7 +34,7 @@ def enter():
     tran = {}
     if request.method == 'POST':
         tran['tran_date'] = request.form['date']
-        tran['symbol'] = request.form['symbol']
+        tran['symbol'] = request.form['symbol'].upper()
         tran['quantity'] = request.form['quantity']
         tran['share_price'] = request.form['share-price']
         db = get_db()
@@ -39,15 +55,15 @@ def enter():
             error = f"symbol {tran['symbol']} not found"
 
         if error is None:
+            check_transaction('enter',tran['symbol'], tran['tran_date'])
             db.execute(
                     '''INSERT INTO transactions (user_id, tran_date, symbol, quantity, share_price) 
                     VALUES (?, ?, ?, ?, ?)''',
-                    (g.user['id'], tran['tran_date'], tran['symbol'].upper(), tran['quantity'], tran['share_price']),
+                    (g.user['id'], tran['tran_date'], tran['symbol'], tran['quantity'], tran['share_price']),
             )
-            db.commit()    
+            db.commit()   
             flash('Transaction Saved','success')
             tran = {}
-            cache.set('update_needed',True)
 
         else:
             flash(error,'error')
@@ -74,10 +90,11 @@ def delete(tran_id):
     db = get_db()
     tran=db.execute('''SELECT * FROM transactions WHERE id = ? AND user_id = ? ''', (tran_id,g.user['id'])).fetchone()
     if tran:
+        check_transaction('delete','','')
         db.execute('''DELETE FROM transactions WHERE id = ? AND user_id = ? ''', (tran_id,g.user['id']))
         db.commit()
         flash('Transaction deleted','success')
-        cache.set('update_needed',True)
+        #cache.set('update_needed',True)
         return redirect(url_for('transactions.view'))
     else:
         return Response('401 Unauthorized',status=401)
@@ -95,7 +112,7 @@ def edit(tran_id):
         
         if request.method == 'POST':
             tran_date = request.form['date']
-            symbol = request.form['symbol']
+            symbol = request.form['symbol'].upper()
             quantity = request.form['quantity']
             share_price = request.form['share-price']
             error = None
@@ -115,12 +132,13 @@ def edit(tran_id):
                 error = f"symbol {symbol} not found"
             
             if error is None:
+                check_transaction('edit',tran['symbol'], tran['tran_date'])
                 db.execute('''UPDATE transactions
                 SET tran_date = ?, symbol = ?, quantity = ?, share_price = ?
                 WHERE id = ? ''', (tran_date, symbol, quantity, share_price, tran_id))
                 db.commit()    
                 flash('Transaction Updated','success')
-                cache.set('update_needed',True)
+                #cache.set('update_needed',True)
                 return redirect(url_for('transactions.view'))
                 
             else:
