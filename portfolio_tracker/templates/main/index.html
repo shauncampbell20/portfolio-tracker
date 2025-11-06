@@ -27,43 +27,12 @@
 
             <!-- History graph -->
             <div id="history-graph">Loading...</div>
-            <script>
-              function getHistory(tf) {
-                // function to get graph with fetch and render with Plotly
-                const url = "{{ url_for('main.history_endpoint') }}?tf="+tf;
-                fetch(url)
-                    .then(resp => {
-                      if (resp.status == 204) {
-                        console.log('no content');
-                        document.getElementById('history-graph').innerText = '';
-                      } else if (resp.ok) {
-                        return resp.json();
-                      } else {
-                        throw new Error(`HTTP error! status: ${resp.status}`);
-                      }
-                    })
-                    .then(data => {
-                      document.getElementById('history-graph').innerText = '';
-                      if (!data) return;
-                      var config = {displayModeBar: false};
-                      Plotly.setPlotConfig(config);
-                      Plotly.newPlot('history-graph', data, {}, config);
-                    })
-              };
-              document.addEventListener('DOMContentLoaded', getHistory);
-            </script>
+            <script type="text/javascript">window.historyUrl = "{{ url_for('main.history_endpoint') }}?tf=";</script>
+            <script type="text/javascript" src="{{ url_for('static', filename='js/getHistory.js') }}"></script>
 
             <!-- Button group script -->
             <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
-            <script> 
-              $(document).ready(function() {
-                // Function to set active/inactive button classes
-                $(".btn-group > .btn").click(function() {
-                    $(this).siblings().removeClass("active");
-                    $(this).addClass("active");
-                });
-              });
-            </script>
+            <script src="{{ url_for('static', filename='js/buttonGroup.js') }}"></script>
           </div>
         </div>
       </div>
@@ -81,27 +50,8 @@
           <div class="card-body">
             <h5 class="card-title">Positions</h5>
             <div id="positions-table">Loading...</div>
-            <script>
-              document.addEventListener('DOMContentLoaded', function() {
-                // Function to get positions table with fetch and render HTML
-                fetch("{{ url_for('main.positions_endpoint') }}")
-                    .then(response => {
-                          if (!response.ok) {
-                              throw new Error('Network response was not ok');
-                          }
-                          return response.text(); 
-                      })
-                    .then(htmlContent => {
-                        const targetElement = document.getElementById('positions-table');
-                        if (targetElement) {
-                            targetElement.innerHTML = htmlContent; 
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Error fetching HTML:', error);
-                    });
-              });
-            </script>
+            <script type="text/javascript">window.tableUrl = "{{ url_for('main.positions_endpoint') }}?tf=";</script>
+            <script type="text/javascript" src="{{ url_for('static', filename='js/getPositionsTable.js') }}"></script>
           </div>
         </div>
       </div>

@@ -111,6 +111,7 @@ class CacheControl:
         # calculate positions
         transactions_df = cache.get('transactions_df')
         if isinstance(transactions_df,pd.DataFrame):
+            transactions_df = transactions_df.sort_values('tran_date')
             positions = {}
             for row in transactions_df.values:
                 symb = row[3]

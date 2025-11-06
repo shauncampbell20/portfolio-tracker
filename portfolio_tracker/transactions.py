@@ -148,5 +148,69 @@ def view():
     trans = trans.to_dict('records')
     return render_template('transactions/view.html', trans=trans)
 
+@bp.route('/upload', methods=('GET', 'POST'))
+@login_required
+def upload():
+    if request.method == 'POST':
+        try:
+            df = pd.read_csv(request.files.get('formFile'))
+        except:
+            flash('Unable to parse file')
+            return render_template('transactions/upload.html')
 
+        date_col = request.form.get('tran_date_select')
+        symb_col = request.form.get('symbol_select')
+        q_col = request.form.get('quantity_select')
+        price_col = request.form.get('price_select')
+        if date_col == 'Select column' or symb_col == 'Select column' or q_col == 'Select column' or price_col == 'Select column':
+            flash('Please select columns')
+            return render_template('transactions/upload.html')
+        
+        errors = []
+        print(symb_col)
+        try:
+            df[date_col] = df[date_col].apply(lambda x: pd.Timestamp(x).strftime('%Y-%m-%d'))
+        except:
+            errors.append(f'Unable to convert column {date_col} to date')
+        try:
+            df[symb_col] = df[symb_col].astype(str)
+        except:
+            errors.append(f'Unable to convert column {symb_col} to string')
+        try:
+            df[q_col] = df[q_col].astype(float)
+        except:
+            errors.append(f'Unable to convert column {q_col} to numeric')
+        try:
+            if df[price_col].dtype == object:
+                df[price_col] = df[price_col].apply(lambda x: x.replace('$','').replace(',','').replace('(','').replace(')',''))
+            df[price_col] = df[price_col].astype(float)
+        except:
+            errors.append(f'Unable to convert column {price_col} to numeric')
+        if len(errors) > 0:
+            flash('\n'.join(errors))
+            return render_template('transactions/upload.html')
+        
+        for symbol in df[symb_col].unique():
+            try:
+                test = yf.Ticker(symbol).history(period='7d',interval='1d')
+                if len(test) == 0:
+                    errors.append(f"symbol {symbol} not found")
+            except:
+                errors.append(f"error retrieving data for {symbol}")
+        if len(errors) > 0:
+            flash('\n'.join(errors))
+            return render_template('transactions/upload.html')
+        
+        db = get_db()
+        for ind, row in df.iterrows():
+            db.execute(
+                        '''INSERT INTO transactions (user_id, tran_date, symbol, quantity, share_price) 
+                        VALUES (?, ?, ?, ?, ?)''',
+                        (g.user['id'], row[date_col], row[symb_col], row[q_col], row[price_col]),
+                )
+            db.commit()
+        cache.set('updates_needed',['transactions', 'info', 'history'])
+        flash(f'{len(df)} Transactions Uploaded')
+
+    return render_template('transactions/upload.html')
 
