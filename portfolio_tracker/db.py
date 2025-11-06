@@ -33,8 +33,8 @@ def init_db():
     with current_app.open_resource('schema.sql') as f:
         db.executescript(f.read().decode('utf8'))
     db.execute(
-        "INSERT INTO user (username, password) VALUES (?, ?)",
-        ('test2', generate_password_hash('12345678')),
+        "INSERT INTO user (username, password, role) VALUES (?, ?, ?)",
+        ('admin', generate_password_hash('12345678'), 'admin'),
     )
     db.commit()
 

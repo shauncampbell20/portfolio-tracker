@@ -65,6 +65,10 @@ class CacheControl:
             cache.set("prices", prices)
             cache.set("previous_closes", previous_closes)
             cache.set('splits',splits)
+        else:
+            cache.set('prices',{})
+            cache.set('previous_closes',{})
+            cache.set('splits',{})
 
     def update_history(self):
         '''Update price history
@@ -74,6 +78,8 @@ class CacheControl:
             history = tickers.history(start=min(self.df['tran_date']),end=datetime.today().strftime('%Y-%m-%d'),period=None)
             history=history['Close']
             cache.set('history',history)
+        else:
+            cache.set('history',None)
 
     def update_transactions(self):
         '''Handle splits and cache recomputed transactions
@@ -92,53 +98,56 @@ class CacheControl:
                 except:
                     pass
             cache.set('transactions_df',df)
+        else:
+            cache.set('transactions_df',None)
 
     def update_positions(self):
         '''Update positions table for user
         '''
-
-        # calculate positions
-        transactions_df = cache.get('transactions_df')
-        positions = {}
-        for row in transactions_df.values:
-            symb = row[3]
-            if symb not in positions.keys():
-                positions[symb] = {'ur':[],'r':[]}
-            # BUY
-            if row[4] > 0:
-                positions[symb]['ur'].append([row[4],row[5]])
-                
-            # SELL
-            elif row[4] < 0:
-                shares_to_sell = -row[4]
-                for trade in positions[symb]['ur']:
-                    sold = min(shares_to_sell, trade[0])
-                    shares_to_sell -= sold
-                    trade[0] -= sold
-                    positions[symb]['r'].append([sold, sold*trade[1], sold*row[5]])
-                    if shares_to_sell == 0:
-                        break
-                if shares_to_sell != 0:
-                    raise ValueError('Not enough shares to sell')
-        
-        # update database
         db=get_db()
         db.execute('''DELETE FROM positions WHERE user_id = ? ''', (g.user['id'],))
         db.commit()
-        for symb in positions.keys():
-            q = 0; cb = 0; rcb = 0; rv = 0
-            for ur in positions[symb]['ur']:
-                q += ur[0]
-                cb += ur[0]*ur[1]
-            for r in positions[symb]['r']:
-                rcb += r[1]
-                rv += r[2]
-            db.execute(
-                    '''INSERT INTO positions (user_id, symbol, quantity, cost_basis, realized_cost_basis, realized_value) 
-                    VALUES (?, ?, ?, ?, ?, ?)''',
-                    (g.user['id'], symb, q, cb, rcb, rv),
-            )
-            db.commit()
+        
+        # calculate positions
+        transactions_df = cache.get('transactions_df')
+        if isinstance(transactions_df,pd.DataFrame):
+            positions = {}
+            for row in transactions_df.values:
+                symb = row[3]
+                if symb not in positions.keys():
+                    positions[symb] = {'ur':[],'r':[]}
+                # BUY
+                if row[4] > 0:
+                    positions[symb]['ur'].append([row[4],row[5]])
+                    
+                # SELL
+                elif row[4] < 0:
+                    shares_to_sell = -row[4]
+                    for trade in positions[symb]['ur']:
+                        sold = min(shares_to_sell, trade[0])
+                        shares_to_sell -= sold
+                        trade[0] -= sold
+                        positions[symb]['r'].append([sold, sold*trade[1], sold*row[5]])
+                        if shares_to_sell == 0:
+                            break
+                    if shares_to_sell != 0:
+                        raise ValueError('Not enough shares to sell')
+            
+            # update database
+            for symb in positions.keys():
+                q = 0; cb = 0; rcb = 0; rv = 0
+                for ur in positions[symb]['ur']:
+                    q += ur[0]
+                    cb += ur[0]*ur[1]
+                for r in positions[symb]['r']:
+                    rcb += r[1]
+                    rv += r[2]
+                db.execute(
+                        '''INSERT INTO positions (user_id, symbol, quantity, cost_basis, realized_cost_basis, realized_value) 
+                        VALUES (?, ?, ?, ?, ?, ?)''',
+                        (g.user['id'], symb, q, cb, rcb, rv),
+                )
+                db.commit()
 
     def wait(self):
         '''Method to wait for update to finish 
@@ -176,7 +185,7 @@ def get_positions_table():
         #transactions_df = cache.get('transactions_df')
         db = get_db()
         positions = pd.read_sql_query('''SELECT * FROM positions WHERE user_id = ?''', db, params=(g.user['id'],))
-        if isinstance(positions, pd.DataFrame):
+        if len(positions) > 0:
             positions['cost_basis']=positions['cost_basis'].apply(lambda x: round(x,2))
             positions['last_price']=positions['symbol'].map(prices)
             positions['mk_val']=(positions['last_price']*positions['quantity']).apply(lambda x: round(x,2))

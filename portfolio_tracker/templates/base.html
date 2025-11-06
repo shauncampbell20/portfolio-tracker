@@ -30,6 +30,9 @@
             <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="#" role="button" aria-expanded="false">{{ g.user['username'] }}</a>
             <ul class="dropdown-menu dropdown-menu-end">
               <li><a class="dropdown-item" href="{{ url_for('auth.logout') }}">Log Out</a></li>
+              {% if g.user['role'] == 'admin' %}
+              <li><a class="dropdown-item" href="{{ url_for('main.users') }}">View Users</a></li>
+              {% endif %}
             </ul>
         </li>
 

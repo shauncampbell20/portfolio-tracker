@@ -3,6 +3,7 @@ import re
 from werkzeug.security import check_password_hash, generate_password_hash
 from portfolio_tracker.db import get_db
 from portfolio_tracker import cache
+from datetime import datetime
 from flask import (
     Blueprint, flash, g, redirect, render_template, request, session, url_for
 )
@@ -34,8 +35,8 @@ def register():
         if error == '':
             try:
                 db.execute(
-                    "INSERT INTO user (username, password) VALUES (?, ?)",
-                    (username, generate_password_hash(password)),
+                    "INSERT INTO user (username, password, role) VALUES (?, ?, ?)",
+                    (username, generate_password_hash(password), 'standard'),
                 )
                 db.commit()
                 flash('Account created!','success')
@@ -70,6 +71,8 @@ def login():
         if error is None:
             session.clear()
             session['user_id'] = user['id']
+            db.execute('''UPDATE user SET last_login = ? WHERE id = ?''', (datetime.today().strftime('%Y-%m-%d'), user['id']))
+            db.commit()
             cache.set('status','')
             cache.set('updates_needed',['transactions','info','history'])
             return redirect(url_for('index'))

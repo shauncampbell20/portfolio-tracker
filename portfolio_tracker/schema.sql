@@ -1,10 +1,13 @@
 DROP TABLE IF EXISTS user;
 DROP TABLE IF EXISTS transactions;
+DROP TABLE IF EXISTS positions;
 
 CREATE TABLE user (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   username TEXT UNIQUE NOT NULL,
-  password TEXT NOT NULL
+  password TEXT NOT NULL,
+  role TEXT,
+  last_login TIMESTAMP
 );
 
 CREATE TABLE transactions (

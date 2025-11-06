@@ -1,5 +1,5 @@
 from flask import (
-    Blueprint, flash, g, redirect, render_template, request, url_for, jsonify
+    Blueprint, flash, g, redirect, render_template, request, url_for, jsonify, Response
 )
 
 from werkzeug.exceptions import abort
@@ -22,3 +22,22 @@ def history_endpoint():
 @bp.route('/positions', methods=('GET','POST'))
 def positions_endpoint():
     return get_positions_table()
+
+@bp.route('/users', methods=('GET','POST'))
+def users():
+    if g.user['role'] == 'admin':
+        db = get_db()
+        user = pd.read_sql_query('''SELECT 
+                                    user.id, user.username, user.role, user.last_login,
+                                    COUNT(transactions.id) as transactions
+                                    FROM user
+                                    LEFT JOIN transactions ON user.id = transactions.user_id
+                                    GROUP BY 
+                                    user.id, user.username, user.role, user.last_login
+                                    ''',db)
+        user['last_login'] = user['last_login'].apply(lambda x: pd.Timestamp(x).strftime('%m/%d/%Y') if not pd.isna(x) else '')
+        user = user.to_dict('records')
+        print(user)
+        return render_template('main/users.html', user=user)
+    else:
+        return Response('401 Unauthorized',status=401)
