@@ -56,27 +56,36 @@ class CacheControl:
             prices = {}
             previous_closes = {}
             splits = {}
+            sectors = {}
+            assets = {}
             # cache info for each symbol
-            for tick in self.df['symbol'].unique():
-                info = yf.Ticker(tick)
-                prices[tick] = round(info.fast_info.last_price,2)
-                previous_closes[tick] = round(info.fast_info.previous_close,2)
-                splits[tick] = info.splits
+            for symbol in self.df['symbol'].unique():
+                ticker = yf.Ticker(symbol)
+                prices[symbol] = round(ticker.fast_info.last_price,2)
+                previous_closes[symbol] = round(ticker.fast_info.previous_close,2)
+                splits[symbol] = ticker.splits
+                s, a = self._get_sectors_assets(ticker)
+                sectors[symbol] = s
+                assets[symbol] = a
             cache.set("prices", prices)
             cache.set("previous_closes", previous_closes)
             cache.set('splits',splits)
+            cache.set('sectors',sectors)
+            cache.set('assets',assets)
         else:
             cache.set('prices',{})
             cache.set('previous_closes',{})
             cache.set('splits',{})
+            cache.set('sectors',{})
+            cache.set('assets',{})
 
     def update_history(self):
         '''Update price history
         '''
         if len(self.df) > 0:
             tickers=yf.Tickers(' '.join(self.df['symbol'].unique()))
-            history = tickers.history(start=min(self.df['tran_date']),end=datetime.today().strftime('%Y-%m-%d'),period=None)
-            history=history['Close']
+            history = tickers.history(start=min(self.df['tran_date']),end=datetime.today().strftime('%Y-%m-%d'),period=None,interval='1d')
+            history=history['Close'].dropna()
             cache.set('history',history)
         else:
             cache.set('history',None)
@@ -158,6 +167,33 @@ class CacheControl:
                 break
             else:
                 time.sleep(.1)
+
+    def _get_sectors_assets(self, ticker):
+        '''Get sector and asset distributions for a ticker
+        '''
+        info = ticker.info
+        ttype = info['typeDisp']
+
+        if ttype == 'Equity':
+            sector = info.get('sector')
+            sector = sector.lower().replace(' ','_')
+            sectors = {sector:1.0}
+            assets = {'stockPosition':1.0}
+
+        elif ttype in ['ETF','Fund']:
+            fundsdata = ticker.funds_data
+            sectors = fundsdata.sector_weightings
+            assets = fundsdata.asset_classes
+
+        elif ttype == 'Currency':
+            sectors = {}
+            assets = {'cashPosition':1.0}
+
+        elif ttype == 'Cryptocurrency':
+            sectors = {}
+            assets = {'crypto':1.0}
+            
+        return sectors, assets
 
 CacheController = CacheControl(cache)
 
@@ -252,6 +288,9 @@ def get_history_graph(timeframe):
                     pass
 
             value_history['value']=pd.to_numeric(value_history['value'])
+            color = 'green'
+            if value_history['value'].astype(float).values[-1] < value_history['value'].astype(float).values[0]:
+                color = 'red'
             fig = go.Figure()
             fig.add_trace(go.Scatter(
                 x=value_history.index,
@@ -259,11 +298,89 @@ def get_history_graph(timeframe):
                 mode='lines',
                 name='Solid Line',
                 line=dict(
-                    color='green',  
+                    color=color,  
                     width=2,       
                     dash='solid'   
                 )
             ))
+            fig.update_layout(
+                template='plotly_white', 
+                margin=dict(l=20, r=20, t=20, b=20), 
+                autosize=True, 
+                height=275, 
+                yaxis_tickprefix = '$',
+                yaxis_tickformat = ',.0f'
+            )
+            #fig.update_yaxes(tickformat=".4s")
+            return fig.to_json()
+        else:
+            return Response(status=204)
+
+def get_allocations_graph(disp):
+    if g.user:
+        CacheController()
+
+        # get positions
+        db = get_db()
+        positions = positions=pd.read_sql_query('''SELECT * FROM positions WHERE user_id = ?''',db,params=(g.user['id'],))
+        if len(positions) > 0:
+            prices = cache.get('prices')
+            sectors = cache.get('sectors')
+            assets = cache.get('assets')
+            positions['mkt_val'] = positions['symbol'].map(prices)*positions['quantity']
+
+            # empty sector/asset allocations
+            sector_positions = {
+                'realestate':0,
+                'consumer_cyclical':0,
+                'basic_materials':0,
+                'consumer_defensive':0,
+                'technology':0,
+                'communication_services':0,
+                'financial_services':0,
+                'utilities':0,
+                'industrials':0,
+                'energy':0,
+                'healthcare':0
+            }
+            asset_positions = {
+                'cashPosition': 0,
+                'stockPosition': 0,
+                'bondPosition': 0,
+                'preferredPosition': 0,
+                'convertiblePosition': 0,
+                'otherPosition': 0,
+                'crypto':0
+            }
+
+            # add to allocations
+            for row in positions.values:
+                for sect in sector_positions.keys():
+                    if sect in sectors[row[2]].keys():
+                        sector_positions[sect] += sectors[row[2]][sect]*row[7]
+                for asset in asset_positions.keys():
+                    if asset in assets[row[2]].keys():
+                        asset_positions[asset] += assets[row[2]][asset]*row[7]
+            
+            # convert to percentage
+            total = sum(positions['mkt_val'])
+            for sect in sector_positions.keys():
+                sector_positions[sect] = sector_positions[sect]/total
+            for asset in asset_positions.keys():
+                asset_positions[asset] = asset_positions[asset]/total
+            print('disp:',type(disp))
+            if disp == 'sector' or disp == '[object Event]':
+                categories = ['Real Estate','Consumer Discretionary','Materials','Consumer Staples','Technology',
+                'Communication Services','Financials','Utilities','Industrials','Energy','Healthcare']
+                values = list(sector_positions.values())
+            elif disp == 'asset':
+                categories = ['Cash','Equities','Bonds','Preferred Stock','Convertible Bonds','Commodities','Crypto']
+                values = list(asset_positions.values())
+            categories=[x for _, x in sorted(zip(values, categories),reverse=False)]
+            values=sorted(values,reverse=False)
+
+            bar_trace = go.Bar(x=values, y=categories, orientation='h')
+            fig = go.Figure(data=[bar_trace])
             fig.update_layout(template='plotly_white', margin=dict(l=20, r=20, t=20, b=20), autosize=True, height=275)
             return fig.to_json()
         else:

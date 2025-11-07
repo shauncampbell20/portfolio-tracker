@@ -37,8 +37,22 @@
         </div>
       </div>
 
-      <!-- Empty Cell -->
+      <!-- Allocations Cell -->
       <div class="col-6">
+        <div class="card mb-3 mt-3" >
+          <div class="card-body" >
+            <h5 class="card-title">Allocations</h5>
+            <div class="btn-group" role="group">
+              <button class="btn btn-sm btn-outline-secondary active" onclick = "getAllocations('sector')" role="button">Sectors</button>
+              <button class="btn btn-sm btn-outline-secondary" onclick = "getAllocations('asset')" role="button">Assets</button>
+            </div>
+              <!-- Allocations graph -->
+              <div id="allocations-graph">Loading...</div>
+              <script type="text/javascript">window.allocationUrl = "{{ url_for('main.allocations_endpoint') }}?disp=";</script>
+              <script type="text/javascript" src="{{ url_for('static', filename='js/getAllocations.js') }}"></script>
+            </div>
+          </div>
+        </div>
       </div>
 
     </div>
@@ -46,7 +60,7 @@
 
       <!-- Positions Table Cell -->
       <div class="col-6">
-        <div class="card">
+        <div class="card mb-3 mt-3">
           <div class="card-body">
             <h5 class="card-title">Positions</h5>
             <div id="positions-table">Loading...</div>

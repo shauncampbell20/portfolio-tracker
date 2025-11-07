@@ -6,7 +6,7 @@ from werkzeug.exceptions import abort
 import pandas as pd
 from portfolio_tracker.auth import login_required
 from portfolio_tracker.db import get_db
-from portfolio_tracker.helpers import get_positions_table, cache, get_history_graph
+from portfolio_tracker.helpers import get_positions_table, cache, get_history_graph, get_allocations_graph
 
 bp = Blueprint('main', __name__)
 
@@ -22,6 +22,11 @@ def history_endpoint():
 @bp.route('/positions', methods=('GET','POST'))
 def positions_endpoint():
     return get_positions_table()
+
+@bp.route('/allocations', methods=('GET','POST'))
+def allocations_endpoint():
+    disp = request.args.get('disp')
+    return get_allocations_graph(disp)
 
 @bp.route('/users', methods=('GET','POST'))
 def users():
