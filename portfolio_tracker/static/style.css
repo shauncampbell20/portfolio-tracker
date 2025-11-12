@@ -2,3 +2,11 @@
         width: 180px; 
         margin: 10px;
     }
+
+.color-red {
+        color: red;
+    }
+
+.color-green {
+    color: green;
+}
