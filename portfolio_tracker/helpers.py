@@ -84,7 +84,7 @@ class CacheControl:
         '''
         if len(self.df) > 0:
             tickers=yf.Tickers(' '.join(self.df['symbol'].unique()))
-            history = tickers.history(start=min(self.df['tran_date']),end=datetime.today().strftime('%Y-%m-%d'),period=None,interval='1d')
+            history = tickers.history(start=min(self.df['tran_date']),period=None,interval='1d')#,end=(datetime.today()+timedelta(days=1)).strftime('%Y-%m-%d')
             history=history['Close'].dropna()
             cache.set('history',history)
         else:
@@ -381,7 +381,66 @@ def get_allocations_graph(disp):
 
             bar_trace = go.Bar(x=values, y=categories, orientation='h')
             fig = go.Figure(data=[bar_trace])
-            fig.update_layout(template='plotly_white', margin=dict(l=20, r=20, t=20, b=20), autosize=True, height=275)
+            fig.update_layout(
+                template='plotly_white', 
+                margin=dict(l=20, r=20, t=20, b=20),
+                 autosize=True, 
+                 height=275,
+                 xaxis_tickformat=".1%"
+            )
             return fig.to_json()
         else:
             return Response(status=204)
+
+def get_summary_numbers():
+    if g.user:
+        CacheController()
+
+        db = get_db()
+        positions = positions=pd.read_sql_query('''SELECT * FROM positions WHERE user_id = ?''',db,params=(g.user['id'],))
+        prices = cache.get('prices')
+        positions['mkt_val'] = positions['symbol'].map(prices)*positions['quantity']
+        curr_value = sum(positions['mkt_val'])
+        curr_value_str = f"${curr_value:,.2f}"
+
+        previous_closes = cache.get('previous_closes')
+        positions['previous_close'] = positions['symbol'].map(previous_closes)
+        positions['previous_val']=positions['previous_close']*positions['quantity']
+        positions['daily_gain_loss']=positions['mkt_val']-positions['previous_val']
+        daily_gain_loss = sum(positions['daily_gain_loss'])
+        daily_gain_loss_pct = (sum(positions['daily_gain_loss'])/sum(positions['previous_val']))
+        daily_prefix = '+'
+        if daily_gain_loss < 0:
+            daily_prefix = '-'
+        daily_str = f"{daily_prefix}${daily_gain_loss:,.2f} ({daily_gain_loss_pct:.2%})"
+
+        positions['rlz_gain_loss']=positions['realized_value']-positions['realized_cost_basis']
+        positions['urlz_gain_loss']=positions['mkt_val']-positions['cost_basis']
+        positions['tot_gain_loss']=positions['rlz_gain_loss']+positions['urlz_gain_loss']
+        positions['tot_cost_basis']=positions['cost_basis']+positions['realized_cost_basis']
+        tot_gain_loss = sum(positions['tot_gain_loss'])
+        tot_gain_loss_pct = sum(positions['tot_gain_loss'])/sum(positions['tot_cost_basis'])
+        tot_prefix = '+'
+        if tot_gain_loss < 0:
+            tot_prefix = '-'
+        tot_str = f"{tot_prefix}${tot_gain_loss:,.2f} ({tot_gain_loss_pct:.2%})"
+
+        dgl_col = 'color-green'
+        tot_col = 'color-green'
+        if daily_gain_loss < 0:
+            dgl_col = 'color-red'
+        if tot_gain_loss < 0:
+            tot_col = 'color-red'
+        return curr_value_str, daily_str, tot_str, dgl_col, tot_col
+    else:
+        return None, None, None, None, None
+
+def get_summary_numbers2():
+    curr_value_str, daily_str, tot_str, dgl_col, tot_col = get_summary_numbers()
+    return {
+        'curr_value_str':curr_value_str,
+        'daily_str':daily_str,
+        'tot_str':tot_str,
+        'dgl_col':dgl_col,
+        'tot_col':tot_col
+    }
