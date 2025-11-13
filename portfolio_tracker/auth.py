@@ -2,7 +2,7 @@ import functools
 import re
 from werkzeug.security import check_password_hash, generate_password_hash
 from portfolio_tracker.db import get_db
-from portfolio_tracker import cache
+from portfolio_tracker.controller import controller
 from datetime import datetime
 from flask import (
     Blueprint, flash, g, redirect, render_template, request, session, url_for
@@ -73,8 +73,12 @@ def login():
             session['user_id'] = user['id']
             db.execute('''UPDATE user SET last_login = ? WHERE id = ?''', (datetime.today().strftime('%Y-%m-%d'), user['id']))
             db.commit()
-            cache.set('status','')
-            cache.set('updates_needed',['transactions','info','history'])
+
+            # Update data
+            load_logged_in_user()
+            controller.update_info([])
+            controller.update_history([], None)
+            controller.update_transactions(None,None)
             return redirect(url_for('index'))
 
         flash(error,'error')

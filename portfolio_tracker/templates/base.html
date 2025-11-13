@@ -19,6 +19,9 @@
 
         {% if g.user %}
         <!-- User logged in -->
+        <li class="nav-item">
+            <a class="nav-link" href="{{ url_for('main.refresh') }}">Refresh</a>
+        </li>
         <li class="nav-item dropdown">
             <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="#" role="button" aria-expanded="false">Transactions</a>
             <ul class="dropdown-menu dropdown-menu-">

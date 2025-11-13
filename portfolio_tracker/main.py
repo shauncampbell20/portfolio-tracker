@@ -7,33 +7,55 @@ import pandas as pd
 from portfolio_tracker.auth import login_required
 from portfolio_tracker.db import get_db
 from portfolio_tracker.helpers import get_positions_table, cache, get_history_graph, get_allocations_graph, get_summary_numbers, get_summary_numbers2
+from portfolio_tracker.controller import controller
 
 bp = Blueprint('main', __name__)
 
 @bp.route('/', methods=('GET', 'POST'))
-def index(tf=None):
+def index():
+    '''Render home page
+    '''
     return render_template('main/index.html')
 
 @bp.route('/history', methods=('GET','POST'))
 def history_endpoint():
+    '''Get history graph
+    '''
     timeframe = request.args.get('tf')
     return get_history_graph(timeframe)
 
 @bp.route('/positions', methods=('GET','POST'))
 def positions_endpoint():
+    '''Get positions table
+    '''
     return get_positions_table()
 
 @bp.route('/allocations', methods=('GET','POST'))
 def allocations_endpoint():
+    '''Get allocations graph
+    '''
     disp = request.args.get('disp')
     return get_allocations_graph(disp)
 
 @bp.route('/summary', methods=('GET','POST'))
 def summary_endpoint():
+    '''Get summary data for cards
+    '''
     return get_summary_numbers2()
+
+@bp.route('/refresh', methods=('GET','POST'))
+def refresh():
+    '''Refresh data
+    '''
+    controller.update_info([])
+    controller.update_history([], None)
+    controller.update_transactions(None,None)
+    return render_template('main/index.html')
 
 @bp.route('/users', methods=('GET','POST'))
 def users():
+    '''Get list of users if user role is admin
+    '''
     if g.user['role'] == 'admin':
         db = get_db()
         user = pd.read_sql_query('''SELECT 
