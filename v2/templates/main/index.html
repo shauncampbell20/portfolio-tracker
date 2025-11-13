@@ -1,0 +1,120 @@
+{% extends 'base.html' %}
+
+{% block header %}
+  
+{% endblock %}
+
+{% block content %}
+  {% if g.user %}
+  <!-- User logged in -->
+  <div class="container-fluid">
+    <div class="row justify-content-center">
+      <div class="col-4">
+        <div class="card mb-3 mt-3" >
+          <div class="card-body" >
+            <h6 class="card-title">Total Portfolio Value</h6>
+            <h3 id="current-value"></h3>
+          </div>
+        </div>
+      </div>
+      <div class="col-4">
+        <div class="card mb-3 mt-3" >
+          <div class="card-body" >
+            <h6 class="card-title">Day Change</h6>
+            <h3 class="" id="daily-change"></h3>
+          </div>
+        </div>
+      </div>
+      <div class="col-4">
+        <div class="card mb-3 mt-3" >
+          <div class="card-body" >
+            <h6 class="card-title">Total Change</h6>
+            <h3 class="" id="total-change"></h3>
+          </div>
+        </div>
+      </div>
+      <script type="text/javascript">window.summaryUrl = "{{ url_for('main.summary_endpoint') }}";</script>
+      <script type="text/javascript" src="{{ url_for('static', filename='js/getSummary.js') }}"></script>
+    </div>
+    <div class="row justify-content-center">
+      
+      <!-- Historical Value Cell -->
+      <div class="col-6">
+        <div class="card mb-3 mt-3" >
+          <div class="card-body" >
+            <h5 class="card-title">Historical Portfolio Value</h5>
+            <!-- Time range buttons -->
+            <div class="btn-group" role="group">
+              <button id = "30dbtn" class="btn btn-sm btn-outline-primary" onclick = "getHistory('30')" role="button">1 Mo</button>
+              <button class="btn btn-sm btn-outline-primary" onclick = "getHistory('91')" role="button">3 Mo</button>
+              <button class="btn btn-sm btn-outline-primary" onclick = "getHistory('182')" role="button">6 Mo</button>
+              <button class="btn btn-sm btn-outline-primary" onclick = "getHistory('365')" role="button">1 Yr</button>
+              <button class="btn btn-sm btn-outline-primary" onclick = "getHistory('1095')" role="button">3 Yr</button>
+              <button class="btn btn-sm btn-outline-primary active" onclick = "getHistory('')" role="button">All</button>
+            </div>
+
+            <!-- History graph -->
+            <div id="history-graph">Loading...</div>
+            <script type="text/javascript">window.historyUrl = "{{ url_for('main.history_endpoint') }}?tf=";</script>
+            <script type="text/javascript" src="{{ url_for('static', filename='js/getHistory.js') }}"></script>
+
+            <!-- Button group script -->
+            <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+            <script src="{{ url_for('static', filename='js/buttonGroup.js') }}"></script>
+          </div>
+        </div>
+      </div>
+
+      <!-- Allocations Cell -->
+      <div class="col-6">
+        <div class="card mb-3 mt-3" >
+          <div class="card-body" >
+            <h5 class="card-title">Allocations</h5>
+            <div class="btn-group" role="group">
+              <button class="btn btn-sm btn-outline-primary active" onclick = "getAllocations('sector')" role="button">Sectors</button>
+              <button class="btn btn-sm btn-outline-primary" onclick = "getAllocations('asset')" role="button">Assets</button>
+            </div>
+              <!-- Allocations graph -->
+              <div id="allocations-graph">Loading...</div>
+              <script type="text/javascript">window.allocationUrl = "{{ url_for('main.allocations_endpoint') }}?disp=";</script>
+              <script type="text/javascript" src="{{ url_for('static', filename='js/getAllocations.js') }}"></script>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+    <div class="row justify-content-center">
+
+      <!-- Positions Table Cell -->
+      <div class="col-7">
+        <div class="card mb-3 mt-3">
+          <div class="card-body">
+            <h5 class="card-title">Positions</h5>
+            <div id="positions-table">Loading...</div>
+            <script type="text/javascript">window.tableUrl = "{{ url_for('main.positions_endpoint') }}?tf=";</script>
+            <script type="text/javascript" src="{{ url_for('static', filename='js/getPositionsTable.js') }}"></script>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Empty Cell -->
+      <div class="col-5">
+      </div>
+
+    </div>
+  </div>
+
+  {% else %}
+  <!-- No user logged in -->
+
+  <h1 class="text-center p-5 m-3">Portfolio Tracker</h1>
+  <div class="container-fluid"> 
+        <div class="row justify-content-center">
+          <a href="{{ url_for('auth.register') }}" class="btn btn-primary equal-width-btn">Create Account</a>
+          <a href="{{ url_for('auth.login') }}" class="btn btn-primary equal-width-btn">Log In</a>
+        </div>
+    </div>
+
+  {% endif %}
+{% endblock %} 
