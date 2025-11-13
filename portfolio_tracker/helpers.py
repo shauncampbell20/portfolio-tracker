@@ -97,6 +97,7 @@ class CacheControl:
             df = self.df.copy()
             splits = cache.get('splits')
             df['tran_date']=df['tran_date'].apply(pd.Timestamp)
+            df['quantity'] = df.apply(lambda x: x['quantity'] if x['tran_type'] == 'BUY' else x['quantity']*-1, axis=1)
             for ind, row in df.iterrows():
                 try:
                     s=splits[row['symbol']]
@@ -127,11 +128,11 @@ class CacheControl:
                 if symb not in positions.keys():
                     positions[symb] = {'ur':[],'r':[]}
                 # BUY
-                if row[4] > 0:
+                if row[6] == 'BUY':
                     positions[symb]['ur'].append([row[4],row[5]])
                     
                 # SELL
-                elif row[4] < 0:
+                elif row[6] == 'SELL':
                     shares_to_sell = -row[4]
                     for trade in positions[symb]['ur']:
                         sold = min(shares_to_sell, trade[0])
@@ -142,8 +143,22 @@ class CacheControl:
                             break
                     if shares_to_sell != 0:
                         raise ValueError('Not enough shares to sell')
-            
+
+                # FEE
+                elif row[6] == 'FEE':
+                    shares_to_sell = -row[4]
+                    for trade in positions[symb]['ur']:
+                        sold = min(shares_to_sell, trade[0])
+                        shares_to_sell -= sold
+                        trade[0] -= sold
+                        positions[symb]['r'].append([sold, sold*trade[1], 0])
+                        if shares_to_sell == 0:
+                            break
+                    if shares_to_sell != 0:
+                        raise ValueError('Not enough shares to sell')
+
             # update database
+            print(positions)
             for symb in positions.keys():
                 q = 0; cb = 0; rcb = 0; rv = 0
                 for ur in positions[symb]['ur']:
@@ -236,9 +251,12 @@ def get_positions_table():
             positions['tot_gain_loss']=positions['rlz_gain_loss']+positions['urlz_gain_loss']
             positions['tot_cost_basis']=positions['cost_basis']+positions['realized_cost_basis']
             positions['gain_loss_pct']=round(positions['tot_gain_loss']/positions['tot_cost_basis'],4)
-            positions.drop(['id','user_id','realized_cost_basis','realized_value','previous_val','previous_close','rlz_gain_loss','urlz_gain_loss','tot_cost_basis'],axis=1,inplace=True)
-            positions.columns = ['Symbol','Qty','Cost Basis','Price','Mkt Val','Day Chng $','Day Chng %','Gain Loss $','Gain Loss %']
-            positions = positions[['Symbol','Qty','Price','Mkt Val','Day Chng $','Day Chng %','Cost Basis','Gain Loss $','Gain Loss %']]
+            positions.drop(['id','user_id','realized_cost_basis','realized_value','previous_val','previous_close','cost_basis'],axis=1,inplace=True)
+            positions.rename(columns={'symbol':'Symbol', 'quantity':'Qty', 'tot_cost_basis':'Cost Basis', 'last_price':'Price', 'mk_val':'Mkt Val', 
+                                    'daily_gain_loss':'Day Chng $', 'daily_gain_loss_pct':'Day Chng %', 'rlz_gain_loss':'Rlz Gain Loss $', 'urlz_gain_loss':'Urlz Gain Loss $', 
+                                    'tot_gain_loss':'Tot Gain Loss $', 'gain_loss_pct':'Tot Gain Loss %'}, inplace=True)
+            #positions.columns = ['Symbol','Qty','Cost Basis','Price','Mkt Val','Day Chng $','Day Chng %','Gain Loss $','Gain Loss %']
+            positions = positions[['Symbol','Qty','Price','Mkt Val','Day Chng $','Day Chng %','Cost Basis','Rlz Gain Loss $','Urlz Gain Loss $','Tot Gain Loss $','Tot Gain Loss %']]
             positions.sort_values('Mkt Val',ascending=False,inplace=True)
 
             styles = [
@@ -248,9 +266,9 @@ def get_positions_table():
             html = (
                 positions.style
                 .set_properties(**{'font-size': '10pt'})
-                .map(color_positive_green, subset=['Day Chng $','Day Chng %','Gain Loss $','Gain Loss %'])
-                .format({'Qty': '{:,.2f}', 'Price': '${:,.2f}', 'Mkt Val': '${:,.2f}', 'Day Chng $': '${:,.2f}', 'Cost Basis': '${:,.2f}', 'Gain Loss $': '${:,.2f}',
-                        'Day Chng %': "{:.2%}", 'Gain Loss %': "{:.2%}"})
+                .map(color_positive_green, subset=['Day Chng $','Day Chng %','Rlz Gain Loss $', 'Urlz Gain Loss $', 'Tot Gain Loss $', 'Tot Gain Loss %'])
+                .format({'Qty': '{:,.2f}', 'Price': '${:,.2f}', 'Mkt Val': '${:,.2f}', 'Day Chng $': '${:,.2f}', 'Cost Basis': '${:,.2f}', 'Rlz Gain Loss $': '${:,.2f}',
+                        'Urlz Gain Loss $': '${:,.2f}', 'Tot Gain Loss $': '${:,.2f}', 'Day Chng %': "{:.2%}", 'Tot Gain Loss %': "{:.2%}"})
                 .hide(axis='index')
                 .set_table_styles(styles)
                 .set_properties(header="true",index=False, justify='left')
@@ -288,6 +306,16 @@ def get_history_graph(timeframe):
                     pass
 
             value_history['value']=pd.to_numeric(value_history['value'])
+
+            # append current value
+            if value_history.index[-1] != pd.Timestamp.today().normalize():
+                db = get_db()
+                positions = pd.read_sql_query('''SELECT * FROM positions WHERE user_id = ?''',db,params=(g.user['id'],))
+                prices = cache.get('prices')
+                positions['mkt_val'] = positions['symbol'].map(prices)*positions['quantity']
+                curr_value = sum(positions['mkt_val'])
+                value_history = pd.concat([value_history,pd.DataFrame({'value':curr_value}, index=[pd.Timestamp.today().normalize()])])
+
             color = 'green'
             if value_history['value'].astype(float).values[-1] < value_history['value'].astype(float).values[0]:
                 color = 'red'

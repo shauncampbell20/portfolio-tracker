@@ -17,6 +17,7 @@ CREATE TABLE transactions (
   symbol TEXT NOT NULL,
   quantity INTEGER NOT NULL,
   share_price REAL NOT NULL,
+  tran_type TEXT NOT NULL,
   FOREIGN KEY (user_id) REFERENCES user (id)
 );
 

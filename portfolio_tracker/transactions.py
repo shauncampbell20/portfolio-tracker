@@ -28,8 +28,14 @@ def check_transaction(tran_type, **kwargs):
             errors.append('Date is required.')
         if not quantity:
             errors.append('quantity is required.')
+        else:
+            if float(quantity) < 0:
+                errors.append('quantity must be a positive number.')
         if not share_price:
             errors.append('share price is required.')
+        else:
+            if float(share_price) < 0:
+                errors.append('share price must be a positive number.')
         if not symbol:
             errors.append('symbol is required.')
         # check that symbol exists
@@ -67,6 +73,7 @@ def enter():
     if request.method == 'POST':
         tran['tran_date'] = request.form['date']
         tran['symbol'] = request.form['symbol'].upper()
+        tran['tran_type'] = request.form['tran_type'].upper()
         tran['quantity'] = request.form['quantity']
         tran['share_price'] = request.form['share-price']
         
@@ -76,9 +83,9 @@ def enter():
             db = get_db()
             #check_transaction('enter',tran['symbol'], tran['tran_date'])
             db.execute(
-                    '''INSERT INTO transactions (user_id, tran_date, symbol, quantity, share_price) 
-                    VALUES (?, ?, ?, ?, ?)''',
-                    (g.user['id'], tran['tran_date'], tran['symbol'], tran['quantity'], tran['share_price']),
+                    '''INSERT INTO transactions (user_id, tran_date, symbol, quantity, share_price, tran_type) 
+                    VALUES (?, ?, ?, ?, ?, ?)''',
+                    (g.user['id'], tran['tran_date'], tran['symbol'], tran['quantity'], tran['share_price'], tran['tran_type']),
             )
             db.commit()   
             flash('Transaction Saved','success')
@@ -121,6 +128,17 @@ def edit(tran_id):
     else:
         return Response('401 Unauthorized',status=401)
 
+@bp.route('/deleteall', methods=('GET', 'POST'))
+@login_required
+def delete_all():
+    '''Delete all of user's transactions
+    '''
+    if g.user:
+        db = get_db()
+        db.execute('''DELETE FROM transactions WHERE user_id = ? ''', (g.user['id'],))
+        db.commit()
+        return redirect(url_for('transactions.view'))
+
 @bp.route('/delete/<tran_id>', methods=('GET', 'POST'))
 @login_required
 def delete(tran_id):
@@ -162,6 +180,7 @@ def upload():
         symb_col = request.form.get('symbol_select')
         q_col = request.form.get('quantity_select')
         price_col = request.form.get('price_select')
+        type_col = request.form.get('type_select')
         if date_col == 'Select column' or symb_col == 'Select column' or q_col == 'Select column' or price_col == 'Select column':
             flash('Please select columns')
             return render_template('transactions/upload.html')
@@ -178,14 +197,24 @@ def upload():
             errors.append(f'Unable to convert column {symb_col} to string')
         try:
             df[q_col] = df[q_col].astype(float)
+            if len(df[df[q_col]<0]) > 0:
+                errors.append('Quantity must be positive.')
         except:
             errors.append(f'Unable to convert column {q_col} to numeric')
         try:
             if df[price_col].dtype == object:
                 df[price_col] = df[price_col].apply(lambda x: x.replace('$','').replace(',','').replace('(','').replace(')',''))
             df[price_col] = df[price_col].astype(float)
+            if len(df[df[price_col]<0]) > 0:
+                errors.append('Price must be positive.')
         except:
             errors.append(f'Unable to convert column {price_col} to numeric')
+        try:
+            df[type_col] = df[type_col].astype(str).apply(lambda x: x.upper())
+            if len(df[(df[type_col]!='BUY')&(df[type_col]!='SELL')&(df[type_col]!='FEE')]) > 0:
+                errors.append('Transaction type must be BUY, SELL, or FEE')
+        except:
+            errors.append(f'Unable to convert column {type_col} to numeric')
         if len(errors) > 0:
             flash('\n'.join(errors))
             return render_template('transactions/upload.html')
@@ -204,9 +233,9 @@ def upload():
         db = get_db()
         for ind, row in df.iterrows():
             db.execute(
-                        '''INSERT INTO transactions (user_id, tran_date, symbol, quantity, share_price) 
-                        VALUES (?, ?, ?, ?, ?)''',
-                        (g.user['id'], row[date_col], row[symb_col], row[q_col], row[price_col]),
+                        '''INSERT INTO transactions (user_id, tran_date, symbol, quantity, share_price, tran_type) 
+                        VALUES (?, ?, ?, ?, ?, ?)''',
+                        (g.user['id'], row[date_col], row[symb_col], row[q_col], row[price_col], row[type_col]),
                 )
             db.commit()
         cache.set('updates_needed',['transactions', 'info', 'history'])
