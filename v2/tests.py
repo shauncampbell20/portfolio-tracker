@@ -10,12 +10,15 @@ import pandas as pd
 def test_command():
     app = create_app()
     with app.app_context():
-        g.user = get_db().execute(
+        db = get_db()
+        g.user = db.execute(
             'SELECT * FROM user WHERE id = ?', (1,)
         ).fetchone()
         controller = Controller(cache)
-        test1 = False
-        test2 = True
+        test1 = True
+        test2 = False
+        db.execute('''DELETE FROM transactions WHERE user_id = ?''', (g.user['id'],))
+        db.commit()
         if test1:
             print('# invalid transaction')
             errors = controller.check_transaction('enter',
@@ -80,6 +83,48 @@ def test_command():
                 'share_price': '350'}
             )
             print(errors)
+            print('# valid sell')
+            errors = controller.check_transaction('enter',
+                {'tran_date': '2025-11-02',
+                'symbol': 'SPY',
+                'tran_type': 'SELL',
+                'quantity': '1',
+                'share_price': '500'}
+            )
+            print(errors)
+            print('# valid fee')
+            errors = controller.check_transaction('enter',
+                {'tran_date': '2025-11-02',
+                'symbol': 'SPY',
+                'tran_type': 'FEE',
+                'quantity': '.01',
+                'share_price': '500'}
+            )
+            print(errors)
+            print('# edit transaction, same symbol')
+            tran = db.execute('''SELECT * FROM transactions WHERE user_id = ?''',(g.user['id'],)).fetchone()
+            tran = dict(tran)
+            tran['quantity'] = '2'
+            errors = controller.check_transaction('edit',tran)
+            print(errors)
+            print('# edit transaction, new symbol')
+            tran['symbol'] = 'AAPL'
+            errors = controller.check_transaction('edit',tran)
+            print(errors)
+            print('# edit transaction, change to sell')
+            tran['tran_type'] = 'SELL'
+            errors = controller.check_transaction('edit',tran)
+            print(errors)
+            print('# delete non-existent transaction')
+            db.execute('''DELETE FROM transactions WHERE id = ?''',(999,))
+            db.commit()
+            errors = controller.check_transaction('delete',None)
+            print(errors)
+            print('# delete existing transaction')
+            db.execute('''DELETE FROM transactions WHERE id = ?''',(tran['id'],))
+            db.commit()
+            errors = controller.check_transaction('delete',None)
+            print(errors)
         elif test2:
             # tran = {'tran_date': '2025-01-02',
             #     'symbol': 'TSLA',
@@ -87,14 +132,21 @@ def test_command():
             #     'quantity': '1',
             #     'share_price': '350'}
             # controller.check_transaction('enter', tran)
-            tran = {'tran_date': '2025-01-02',
+            errors = controller.check_transaction('enter',
+                {'tran_date': '2021-08-01',
                 'symbol': 'TSLA',
                 'tran_type': 'BUY',
-                'quantity': '10',
-                'share_price': '350',
-                'tran_id':2}
-            errors=controller.check_transaction('edit', tran)
-            print(errors)
+                'quantity': '3',
+                'share_price': '875'}
+            )
+            print('# valid sell')
+            errors = controller.check_transaction('enter',
+                {'tran_date': '2025-11-02',
+                'symbol': 'TSLA',
+                'tran_type': 'SELL',
+                'quantity': '3',
+                'share_price': '400'}
+            )
 
 def init_app(app):
     app.cli.add_command(test_command)

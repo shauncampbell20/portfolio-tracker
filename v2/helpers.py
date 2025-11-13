@@ -106,7 +106,6 @@ class Controller:
                     info[symbol] = symbol_info
                 except:
                     self.errors.append(f"symbol {symbol} not found")
-        print(info)
         cache.set('info',info)
 
     def update_history(self, new_symbols, dt):
@@ -157,7 +156,6 @@ class Controller:
                 tickers=yf.Tickers(' '.join(symbols))
                 history = tickers.history(start=min_date.strftime('%Y-%m-%d'),period=None,interval='1d')
                 history=history['Close'].dropna()
-                print(history)
                 cache.set('history',history)
             except:
                 self.errors.append('Failed to update history')
@@ -165,12 +163,14 @@ class Controller:
     def update_transactions(self, action, tran):
         '''Handle splits and cache recomputed transactions
         '''
-        transactions_df = cache.get('transactions_df')
         db = get_db()
-        if not isinstance(transactions_df, pd.DataFrame):
-            transactions_df = pd.read_sql_query('''SELECT tran_date, symbol, quantity, share_price, tran_type, id  FROM transactions WHERE user_id = ?''', db, params=(g.user['id'],))
+        #transactions_df = cache.get('transactions_df')
+        #if not isinstance(transactions_df, pd.DataFrame):
+        transactions_df = pd.read_sql_query('''SELECT tran_date, symbol, quantity, share_price, tran_type, id  FROM transactions WHERE user_id = ?''', db, params=(g.user['id'],))
+        transactions_df['quantity'] = transactions_df.apply(lambda x: abs(x['quantity']) if x['tran_type'] == 'BUY' else abs(x['quantity'])*-1, axis=1)
         if action == 'enter':
             transactions_df = pd.concat([transactions_df, pd.DataFrame(tran, index=[0])]) 
+            transactions_df.reset_index(drop=True, inplace=True)
         elif action == 'edit':
             transactions_df = pd.read_sql_query('''SELECT tran_date, symbol, quantity, share_price, tran_type, id  FROM transactions WHERE user_id = ?''', db, params=(g.user['id'],))
             ind = transactions_df[transactions_df['id']==tran['id']].index
@@ -183,9 +183,13 @@ class Controller:
             transactions_df = pd.read_sql_query('''SELECT tran_date, symbol, quantity, share_price, tran_type, id  FROM transactions WHERE user_id = ?''', db, params=(g.user['id'],))
 
         if len(transactions_df) > 0:
-            splits = cache.get('splits')
+
+            info = cache.get('info')
+            splits = {}
+            for symbol in info.keys():
+                splits[symbol] = info[symbol]['splits']
             transactions_df['tran_date'] = transactions_df['tran_date'].apply(pd.Timestamp)
-            transactions_df['quantity'] = transactions_df.apply(lambda x: x['quantity'] if x['tran_type'] == 'BUY' else x['quantity']*-1, axis=1)
+            transactions_df['quantity'] = transactions_df.apply(lambda x: abs(x['quantity']) if x['tran_type'] == 'BUY' else abs(x['quantity'])*-1, axis=1)
             for ind, row in transactions_df.iterrows():
                 try:
                     s=splits[row['symbol']]
@@ -193,7 +197,7 @@ class Controller:
                     mult = np.cumprod(s[s.index > row['tran_date']]).values[-1]
                     transactions_df.loc[ind,'quantity'] = row['quantity']*mult
                     transactions_df.loc[ind,'share_price'] = row['share_price']/mult
-                except:
+                except Exception as e:
                     pass
             cache.set('transactions_df',transactions_df)
         else:
@@ -251,6 +255,8 @@ class Controller:
                 # unwind
                 cache.set('transactions_df',None)
                 self.update_transactions(None, None)
+        else:
+            cache.set('positions',{})
 
     def update_database(self, action, tran):
         db = get_db()
@@ -264,6 +270,8 @@ class Controller:
             db.commit()
         
         elif action == 'edit':
+            if tran['tran_type'] == 'SELL' or tran['tran_type'] == 'FEE':
+                tran['quantity'] = tran['quantity']*-1
             # update transaction
             db.execute('''UPDATE transactions
                 SET tran_date = ?, symbol = ?, quantity = ?, share_price = ?

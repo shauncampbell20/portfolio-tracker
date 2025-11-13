@@ -15,7 +15,7 @@ CREATE TABLE transactions (
   user_id INTEGER NOT NULL,
   tran_date TIMESTAMP NOT NULL,
   symbol TEXT NOT NULL,
-  quantity INTEGER NOT NULL,
+  quantity REAL NOT NULL,
   share_price REAL NOT NULL,
   tran_type TEXT NOT NULL,
   FOREIGN KEY (user_id) REFERENCES user (id)

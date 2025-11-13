@@ -44,6 +44,7 @@ def edit(tran_id):
     if tran:
         tran = dict(tran)
         tran['tran_date'] = pd.Timestamp(tran['tran_date']).strftime('%Y-%m-%d')
+        tran['quantity'] = abs(tran['quantity'])
         
         if request.method == 'POST':
             tran['tran_date'] = request.form['date']
