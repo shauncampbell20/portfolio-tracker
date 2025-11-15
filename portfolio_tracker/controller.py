@@ -2,14 +2,13 @@ import yfinance as yf
 import numpy as np
 import pandas as pd
 from portfolio_tracker.db import get_db
-from portfolio_tracker import cache
-from flask import g, Response
+from flask import g, Response, session
 from datetime import datetime, timedelta
 
 class Controller:
     '''Class to manage getting and updating data and validating transactions
     '''
-    def __init__(self, cache):
+    def __init__(self):
         pass
 
     def check_transaction(self, action, tran):
@@ -75,7 +74,6 @@ class Controller:
 
         # Upload
         elif action == 'upload':
-            print(tran)
             # Check if have info for all symbol. If not, update cache
             symbols = tran['symbol'].unique()
             self.update_info(symbols)
@@ -83,7 +81,6 @@ class Controller:
                 return self.errors
 
             # check if history update needed
-            print(tran)
             self.update_history(symbols, min(tran['tran_date']))
 
             # update transactions and positions, if no errors, update database
@@ -97,16 +94,16 @@ class Controller:
     def update_info(self, symbols):
         ''' Check and update information for symbols
         '''
-        if not hasattr(self, 'errors'):
-            self.errors = []
+        print('---update info')
+        self.errors = []
 
         if len(symbols) == 0: # No symbols provided
             db = get_db()
-            positions = db.execute('''SELECT DISTINCT symbol FROM positions WHERE user_id = ? ''', (g.user['id'],)).fetchall()
+            positions = db.execute('''SELECT DISTINCT symbol FROM transactions WHERE user_id = ? ''', (g.user['id'],)).fetchall()
             symbols = [p[0] for p in positions]
         if type(symbols) == str: # Single symbol provided
             symbols = [symbols]
-        info = cache.get('info')
+        info = session.get('info')
         updates = []
         
         # info doesn't exist
@@ -122,25 +119,28 @@ class Controller:
 
         # update
         if len(updates) > 0:
-            print('---update info')
             for symbol in symbols:
                 try:
                     symbol_info = {}
                     ticker = yf.Ticker(symbol)
                     symbol_info['price'] = round(ticker.fast_info.last_price,2)
                     symbol_info['previous_close'] = round(ticker.fast_info.previous_close,2)
-                    symbol_info['splits'] = ticker.splits
+                    splits = ticker.splits
+                    splits.index = splits.index.strftime('%Y-%m-%d')
+                    symbol_info['splits'] = splits.to_dict()
                     s, a = self._get_sectors_assets(ticker)
                     symbol_info['sectors'] = s
                     symbol_info['assets'] = a
                     info[symbol] = symbol_info
                 except:
                     self.errors.append(f"symbol {symbol} not found")
-        cache.set('info',info)
+
+        session['info'] = info
 
     def update_history(self, new_symbols, dt):
         '''Check and update price histories for symbols
         '''
+        print('---update history')
         if not hasattr(self, 'errors'):
             self.errors = []
 
@@ -148,17 +148,22 @@ class Controller:
             new_symbols = [new_symbols]
         elif len(new_symbols) == 0: # no symbols provided
             db = get_db()
-            positions = db.execute('''SELECT DISTINCT symbol FROM positions WHERE user_id = ? ''', (g.user['id'],)).fetchall()
+            positions = db.execute('''SELECT DISTINCT symbol FROM transactions WHERE user_id = ? ''', (g.user['id'],)).fetchall()
             new_symbols = [p[0] for p in positions]
         if not dt: # no minimum date provided
             db = get_db()
             dt = db.execute('''SELECT MIN(tran_date) FROM transactions WHERE user_id = ? ''', (g.user['id'],)).fetchone()[0]
         dt = pd.Timestamp(dt)
-        history = cache.get('history')
+
+        try:
+            history = pd.DataFrame(session.get('history'))
+            history.index = pd.to_datetime(history.index)
+        except:
+            history = None
         update = False
 
         # history exists
-        if isinstance(history, pd.DataFrame): 
+        if isinstance(history, pd.DataFrame) and len(history) > 0: 
             symbols = list(history.columns)
             min_date = min(history.index)
             new_symbols = [s for s in new_symbols if s not in symbols]
@@ -182,18 +187,21 @@ class Controller:
         
         # update
         if update:
-            print('---update history')
             try:
+                print('min date:',min_date)
                 tickers=yf.Tickers(' '.join(symbols))
                 history = tickers.history(start=min_date.strftime('%Y-%m-%d'),period=None,interval='1d')
                 history=history['Close'].dropna()
-                cache.set('history',history)
-            except:
+                history.index = history.index.strftime('%Y-%m-%d')
+                session['history'] = history.to_dict()
+            except Exception as e:
+                print(e)
                 self.errors.append('Failed to update history')
 
     def update_transactions(self, action, tran):
         '''Handle splits and cache recomputed transactions
         '''
+        print('---update transactions')
         # get transactions from database and ensure sell/fee transactions are negative
         db = get_db()
         transactions_df = pd.read_sql_query('''SELECT tran_date, symbol, quantity, share_price, tran_type, id  FROM transactions WHERE user_id = ?''', db, params=(g.user['id'],))
@@ -230,11 +238,13 @@ class Controller:
 
         if len(transactions_df) > 0:
             # Handle splits
-            info = cache.get('info')
+            info = session.get('info')
             splits = {}
             for symbol in info.keys():
-                splits[symbol] = info[symbol]['splits']
-            transactions_df['tran_date'] = transactions_df['tran_date'].apply(pd.Timestamp)
+                spl = pd.Series(info[symbol]['splits'])
+                spl.index = pd.to_datetime(spl.index)
+                splits[symbol] = spl
+            transactions_df['tran_date'] = pd.to_datetime(transactions_df['tran_date'])#.apply(pd.Timestamp)
             transactions_df['quantity'] = transactions_df.apply(lambda x: abs(x['quantity']) if x['tran_type'] == 'BUY' else abs(x['quantity'])*-1, axis=1)
             for ind, row in transactions_df.iterrows():
                 try:
@@ -245,20 +255,25 @@ class Controller:
                     transactions_df.loc[ind,'share_price'] = row['share_price']/mult
                 except Exception as e:
                     pass
-            cache.set('transactions_df',transactions_df)
+
+            transactions_df['tran_date'] = transactions_df['tran_date'].dt.strftime('%Y-%m-%d')
+            session['transactions_df'] = transactions_df.to_dict()
         else:
-            cache.set('transactions_df',None)
-        print(transactions_df)
+            session['transactions_df'] = None
+
 
     def update_positions(self):
         '''Update positions 
         '''
+        print('---update positions')
         if not hasattr(self, 'errors'):
             self.errors = []
 
-        
-        transactions_df = cache.get('transactions_df')
-        if isinstance(transactions_df,pd.DataFrame):
+        transactions_df =pd.DataFrame(session.get('transactions_df'))
+        if isinstance(transactions_df,pd.DataFrame) and len(transactions_df) > 0:
+            print('-retrieved transactions_df')
+            print(transactions_df)
+            transactions_df['tran_date'] = pd.to_datetime(transactions_df['tran_date'])
             # calculate positions
             transactions_df = transactions_df.sort_values('tran_date')
             positions = {}
@@ -297,14 +312,17 @@ class Controller:
                         self.errors.append('Not enough shares to sell')
 
             if len(self.errors) == 0:
-                cache.set('positions',positions)
-                print(positions)
+                print('-set positions')
+                session['positions'] = positions
             else:
                 # unwind
-                cache.set('transactions_df',None)
+                print(self.errors)
+                print('-unwind')
+                session['transactions_df'] = None
                 self.update_transactions(None, None)
         else:
-            cache.set('positions',{})
+            print('-no transactions_df')
+            session['positions'] = {}
 
     def update_database(self, action, tran):
         db = get_db()
@@ -347,7 +365,7 @@ class Controller:
         # update positions
         db.execute('''DELETE FROM positions WHERE user_id = ? ''', (g.user['id'],))
         db.commit()
-        positions = cache.get('positions')
+        positions = session.get('positions')
         for symb in positions.keys():
             q = 0; cb = 0; rcb = 0; rv = 0
             for ur in positions[symb]['ur']:
@@ -390,4 +408,4 @@ class Controller:
             
         return sectors, assets
 
-controller = Controller(cache)
+controller = Controller()

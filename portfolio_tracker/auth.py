@@ -76,9 +76,15 @@ def login():
 
             # Update data
             load_logged_in_user()
+            session['info'] = None
+            session['positions'] = {}
+            session['transactions_df'] = None
+            session['history'] = None
             controller.update_info([])
             controller.update_history([], None)
             controller.update_transactions(None,None)
+            controller.update_positions()
+            controller.update_database(None,None)
             return redirect(url_for('index'))
 
         flash(error,'error')

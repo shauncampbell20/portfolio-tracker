@@ -30,4 +30,5 @@ CREATE TABLE positions (
   realized_cost_basis REAL NOT NULL,
   realized_value REAL NOT NULL,
   FOREIGN KEY (user_id) REFERENCES user (id)
-)
+);
+

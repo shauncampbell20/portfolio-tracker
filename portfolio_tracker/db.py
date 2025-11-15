@@ -36,6 +36,34 @@ def init_db():
         "INSERT INTO user (username, password, role) VALUES (?, ?, ?)",
         ('admin', generate_password_hash('12345678'), 'admin'),
     )
+    db.execute(
+        "INSERT INTO user (username, password, role, last_login) VALUES (?, ?, ?, ?)",
+        ('test1', generate_password_hash('12345678'), 'standard', '2025-11-15'),
+    )
+    db.execute(
+        "INSERT INTO user (username, password, role, last_login) VALUES (?, ?, ?, ?)",
+        ('test2', generate_password_hash('12345678'), 'standard','2025-10-07'),
+    )
+    db.execute(
+        '''INSERT INTO transactions (user_id, tran_date, symbol, quantity, share_price, tran_type) VALUES (?, ?, ?, ?, ?, ?)''',
+        (2,'2022-11-15','GLD',20,165.5,'BUY')
+    )
+    db.execute(
+        '''INSERT INTO transactions (user_id, tran_date, symbol, quantity, share_price, tran_type) VALUES (?, ?, ?, ?, ?, ?)''',
+        (2,'2022-11-15','SPY',100,382.43,'BUY')
+    )
+    db.execute(
+        '''INSERT INTO transactions (user_id, tran_date, symbol, quantity, share_price, tran_type) VALUES (?, ?, ?, ?, ?, ?)''',
+        (2,'2022-11-15','BTC-USD',0.1,16884.61,'BUY')
+    )
+    db.execute(
+        '''INSERT INTO transactions (user_id, tran_date, symbol, quantity, share_price, tran_type) VALUES (?, ?, ?, ?, ?, ?)''',
+        (2,'2022-11-15','BND',200,64.63,'BUY')
+    )
+    db.execute(
+        '''INSERT INTO transactions (user_id, tran_date, symbol, quantity, share_price, tran_type) VALUES (?, ?, ?, ?, ?, ?)''',
+        (2,'2022-11-15','AAPL',100,150.04,'BUY')
+    )
     db.commit()
 
 

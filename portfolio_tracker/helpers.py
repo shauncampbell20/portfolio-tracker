@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 from portfolio_tracker.db import get_db
 from portfolio_tracker import cache
-from flask import g, Response
+from flask import g, Response, session
 from datetime import datetime, timedelta
 import plotly.express as px
 import plotly.graph_objects as go
@@ -28,7 +28,7 @@ def get_positions_table():
     '''Calculate and format the user's table of positions
     '''
     if g.user:
-        info = cache.get('info')
+        info = session.get('info')
         if not info:
             return ''
         prices = {}
@@ -37,7 +37,6 @@ def get_positions_table():
             prices[symbol] = info[symbol]['price']
             previous_closes[symbol] = info[symbol]['previous_close']
 
-        #transactions_df = cache.get('transactions_df')
         db = get_db()
         positions = pd.read_sql_query('''SELECT * FROM positions WHERE user_id = ?''', db, params=(g.user['id'],))
         if len(positions) > 0:
@@ -88,21 +87,21 @@ def get_history_graph(timeframe):
     '''
     if g.user:
 
-        history = cache.get('history')
-        transactions_df = cache.get('transactions_df')
-        info = cache.get('info')
+        history = pd.DataFrame(session.get('history'))
+        transactions_df = pd.DataFrame(session.get('transactions_df'))
+        info = session.get('info')
         if not info:
             return Response(status=204)
 
-        if isinstance(transactions_df, pd.DataFrame):
+        if isinstance(transactions_df, pd.DataFrame) and len(transactions_df) > 0:
             trades=transactions_df.groupby(['tran_date','symbol'],as_index=False).agg({'quantity':'sum'})
-            trades['tran_date']=pd.DatetimeIndex(trades['tran_date'])
+            trades['tran_date']=pd.to_datetime(trades['tran_date'])
+            history.index = pd.to_datetime(history.index)
             trades=trades.pivot(columns='symbol',index='tran_date')
             qhistory=pd.DataFrame(index=history.index).merge(trades['quantity'],left_index=True, right_index=True,how='outer')
             qhistory=qhistory.fillna(0).cumsum(axis=0)
             qhistory=qhistory[qhistory.index.isin(history.index)]
             value_history=pd.DataFrame((history*qhistory).sum(axis=1), columns=['value'])
-
             if timeframe:
                 try:
                     value_history = value_history[value_history.index >= datetime.today()-timedelta(days=int(timeframe))]
@@ -110,7 +109,7 @@ def get_history_graph(timeframe):
                     pass
 
             value_history['value']=pd.to_numeric(value_history['value'])
-
+            
             # append current value
             if value_history.index[-1] != pd.Timestamp.today().normalize():
                 db = get_db()
@@ -155,7 +154,7 @@ def get_allocations_graph(disp):
         
         # get positions
         db = get_db()
-        info = cache.get('info')
+        info = session.get('info')
         if not info:
             return Response(status=204)
         positions = positions=pd.read_sql_query('''SELECT * FROM positions WHERE user_id = ?''',db,params=(g.user['id'],))
@@ -220,7 +219,7 @@ def get_allocations_graph(disp):
             categories=[x for _, x in sorted(zip(values, categories),reverse=False)]
             values=sorted(values,reverse=False)
 
-            bar_trace = go.Bar(x=values, y=categories, orientation='h')
+            bar_trace = go.Bar(x=values, y=categories, orientation='h',marker_color='#0d6efd')
             fig = go.Figure(data=[bar_trace])
             fig.update_layout(
                 template='plotly_white', 
@@ -240,7 +239,7 @@ def get_summary_numbers():
         positions = positions=pd.read_sql_query('''SELECT * FROM positions WHERE user_id = ?''',db,params=(g.user['id'],))
         prices = {}
         previous_closes = {}
-        info = cache.get('info')
+        info = session.get('info')
         if not info:
             return None, None, None, None, None
         for symbol in info.keys():

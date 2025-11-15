@@ -1,8 +1,11 @@
 import os
 from flask import Flask 
 from flask_caching import Cache
+from flask_session import Session
+from cachelib.file import FileSystemCache
 
 cache = Cache()
+sess = Session()
 
 def create_app(test_config=None):
     '''Create and configure the app
@@ -13,9 +16,13 @@ def create_app(test_config=None):
         DATABASE=os.path.join(app.instance_path, 'db.sqlite'),
         DEBUG=True,
         CACHE_TYPE="SimpleCache",
-        CACHE_DEFAULT_TIMEOUT=300
+        CACHE_DEFAULT_TIMEOUT=300,
+        SESSION_TYPE = "cachelib",
+        SESSION_CACHELIB = FileSystemCache(cache_dir='sessions', threshold=500),
+        SESSION_SERIALIZATION_FORMAT = 'json'
     )
     cache.init_app(app)
+    sess.init_app(app)
     if test_config is None:
         # load the instance config, if it exists, when not testing
         app.config.from_pyfile('config.py', silent=True)

@@ -1,12 +1,12 @@
 from flask import (
-    Blueprint, flash, g, redirect, render_template, request, url_for, jsonify, Response
+    Blueprint, flash, g, redirect, render_template, request, url_for, jsonify, Response, session
 )
 
 from werkzeug.exceptions import abort
 import pandas as pd
 from portfolio_tracker.auth import login_required
 from portfolio_tracker.db import get_db
-from portfolio_tracker.helpers import get_positions_table, cache, get_history_graph, get_allocations_graph, get_summary_numbers, get_summary_numbers2
+from portfolio_tracker.helpers import get_positions_table, get_history_graph, get_allocations_graph, get_summary_numbers, get_summary_numbers2
 from portfolio_tracker.controller import controller
 
 bp = Blueprint('main', __name__)
@@ -47,10 +47,14 @@ def summary_endpoint():
 def refresh():
     '''Refresh data
     '''
+    session['info'] = None
+    session['positions'] = {}
+    session['transactions_df'] = None
     controller.update_info([])
-    controller.update_history([], None)
     controller.update_transactions(None,None)
-    return render_template('main/index.html')
+    controller.update_positions()
+    controller.update_database(None,None)
+    return redirect(url_for("main.index")) #render_template('main/index.html')
 
 @bp.route('/users', methods=('GET','POST'))
 def users():
