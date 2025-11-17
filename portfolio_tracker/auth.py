@@ -5,7 +5,7 @@ from portfolio_tracker.db import get_db
 from portfolio_tracker.controller import controller
 from datetime import datetime
 from flask import (
-    Blueprint, flash, g, redirect, render_template, request, session, url_for
+    Blueprint, flash, g, redirect, render_template, request, session, url_for, Response, jsonify
 )
 
 bp = Blueprint('auth', __name__, url_prefix='/auth')
@@ -89,7 +89,11 @@ def login():
 
         flash(error,'error')
 
-    return render_template('auth/login.html')
+        data = {"message": "Authentication required to access this resource.", "url":url_for('auth.login')}
+        return jsonify(data), 401
+
+    else:
+        return render_template('auth/login.html')
 
 @bp.before_app_request
 def load_logged_in_user():
