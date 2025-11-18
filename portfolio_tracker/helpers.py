@@ -376,7 +376,28 @@ def get_advanced_metrics():
         history = pd.DataFrame(session.get('history'))
         transactions_df = pd.DataFrame(session.get('transactions_df'))
         if isinstance(transactions_df, pd.DataFrame) and len(transactions_df) > 0:
-            value_history = calculate_value_history(transactions_df, history)['adj_value']
+            value_history = calculate_value_history(transactions_df, history)
             value_history['s&p'] = np.cumprod(history['^GSPC'].pct_change().fillna(0)+1)*value_history['adj_value'][0]
-            ror = [calc_ror(value_history, off) for off in [30,91,182,365,1095,'all']]
+            ror = [calc_ror(value_history['adj_value'], off) for off in [30,91,182,365,1095,'all']]
             alpha_beta = [calc_beta_alpha(value_history, off) for off in [30,91,182,365,1095,'all']]
+            metrics=pd.concat([pd.DataFrame(ror).T, pd.DataFrame(alpha_beta).T])
+            metrics.columns=['1M','3M','6M','1Y','3Y','All']
+            metrics.index=['Annualized ROR','Beta','Alpha']
+            
+            styles = [
+                dict(selector="th", props=[("font-size", "12px")]) 
+            ]
+
+            html = (
+                metrics.style
+                .set_properties(**{'font-size': '10pt'})
+                .map(color_positive_green, subset=(['Annualized ROR'], slice(None)))
+                .format("{:.2%}", subset=(['Annualized ROR'], slice(None)))
+                .format("{:.3f}", subset=(['Beta','Alpha'], slice(None)))
+                .set_table_styles(styles)
+                .set_properties(header="true", justify='left')
+                .set_table_attributes('class="table table-hover table-sm"')
+                .to_html()
+            )
+            
+            return html
