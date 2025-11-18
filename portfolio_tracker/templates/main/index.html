@@ -98,8 +98,16 @@
         </div>
       </div>
       
-      <!-- Empty Cell -->
+      <!-- Metrics -->
       <div class="col-4">
+    		<div class="card mb-3 mt-3">
+    			<div class="card-body">
+    				<h5 class="card-title">Metrics</h5>
+    				<div id="metrics-table">Loading...</div>
+    				<script type="text/javascript">window.metricsUrl = "{{ url_for('main.metrics_endpoint') }}";</script>
+    				<script type="text/javascript" src="{{ url_for('static', filename='js/getMetricsTable.js') }}"></script>
+    			</div>
+    		</div>
       </div>
 
     </div>
