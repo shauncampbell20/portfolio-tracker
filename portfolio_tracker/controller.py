@@ -150,6 +150,8 @@ class Controller:
             db = get_db()
             positions = db.execute('''SELECT DISTINCT symbol FROM transactions WHERE user_id = ? ''', (g.user['id'],)).fetchall()
             new_symbols = [p[0] for p in positions]
+        new_symbols.extend(['^GSPC','^DJI','^IXIC']) # add indexes for comparisons
+        
         if not dt: # no minimum date provided
             db = get_db()
             dt = db.execute('''SELECT MIN(tran_date) FROM transactions WHERE user_id = ? ''', (g.user['id'],)).fetchone()[0]
