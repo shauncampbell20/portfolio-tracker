@@ -6,6 +6,10 @@
 
 {% block content %}
   {% if g.user %}
+  <script type="text/javascript">window.historyUrl = "{{ url_for('main.history_endpoint') }}";</script>
+  <script type="text/javascript">window.allocationUrl = "{{ url_for('main.allocations_endpoint') }}?disp=";</script>
+  <script type="text/javascript">window.tableUrl = "{{ url_for('main.positions_endpoint') }}?tf=";</script>
+  <script type="text/javascript">window.metricsUrl = "{{ url_for('main.metrics_endpoint') }}";</script>
   <!-- User logged in -->
   <div class="container-fluid">
     <div class="row justify-content-center">
@@ -45,17 +49,19 @@
             <h5 class="card-title">Historical Portfolio Value</h5>
             <!-- Time range buttons -->
             <div class="btn-group" role="group">
-              <button id = "30dbtn" class="btn btn-sm btn-outline-primary" onclick = "getHistory('30')" role="button">1 Mo</button>
-              <button class="btn btn-sm btn-outline-primary" onclick = "getHistory('91')" role="button">3 Mo</button>
-              <button class="btn btn-sm btn-outline-primary" onclick = "getHistory('182')" role="button">6 Mo</button>
-              <button class="btn btn-sm btn-outline-primary" onclick = "getHistory('365')" role="button">1 Yr</button>
-              <button class="btn btn-sm btn-outline-primary" onclick = "getHistory('1095')" role="button">3 Yr</button>
-              <button class="btn btn-sm btn-outline-primary active" onclick = "getHistory('')" role="button">All</button>
+              <button id = "btn-1mo" class="btn btn-sm btn-outline-primary" onclick="getHistory()" role="button">1 Mo</button>
+              <button id = "btn-3mo" class="btn btn-sm btn-outline-primary" onclick="getHistory()" role="button">3 Mo</button>
+              <button id = "btn-6mo" class="btn btn-sm btn-outline-primary" onclick="getHistory()" role="button">6 Mo</button>
+              <button id = "btn-1yr" class="btn btn-sm btn-outline-primary" onclick="getHistory()" role="button">1 Yr</button>
+              <button id = "btn-3yr" class="btn btn-sm btn-outline-primary" onclick="getHistory()" role="button">3 Yr</button>
+              <button id = "btn-all" class="btn btn-sm btn-outline-primary active" onclick="getHistory()" role="button">All</button>
             </div>
+            <button id = "btn-adjust" class="btn btn-sm btn-outline-primary" onclick="getHistory()" role="button" data-bs-toggle="button">Adjust Buy/Sell</button>
 
             <!-- History graph -->
             <div id="history-graph">Loading...</div>
-            <script type="text/javascript">window.historyUrl = "{{ url_for('main.history_endpoint') }}?tf=";</script>
+            
+            <script type="text/javascript" src="{{ url_for('static', filename='js/listeners.js') }}"></script>
             <script type="text/javascript" src="{{ url_for('static', filename='js/getHistory.js') }}"></script>
 
             <!-- Button group script -->
@@ -76,7 +82,7 @@
             </div>
               <!-- Allocations graph -->
               <div id="allocations-graph">Loading...</div>
-              <script type="text/javascript">window.allocationUrl = "{{ url_for('main.allocations_endpoint') }}?disp=";</script>
+              
               <script type="text/javascript" src="{{ url_for('static', filename='js/getAllocations.js') }}"></script>
             </div>
           </div>
@@ -92,7 +98,7 @@
           <div class="card-body">
             <h5 class="card-title">Positions</h5>
             <div id="positions-table">Loading...</div>
-            <script type="text/javascript">window.tableUrl = "{{ url_for('main.positions_endpoint') }}?tf=";</script>
+            
             <script type="text/javascript" src="{{ url_for('static', filename='js/getPositionsTable.js') }}"></script>
           </div>
         </div>
@@ -104,7 +110,7 @@
     			<div class="card-body">
     				<h5 class="card-title">Metrics</h5>
     				<div id="metrics-table">Loading...</div>
-    				<script type="text/javascript">window.metricsUrl = "{{ url_for('main.metrics_endpoint') }}";</script>
+    				
     				<script type="text/javascript" src="{{ url_for('static', filename='js/getMetricsTable.js') }}"></script>
     			</div>
     		</div>

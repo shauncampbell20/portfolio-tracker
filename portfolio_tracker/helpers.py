@@ -84,11 +84,12 @@ def get_positions_table():
 
 def calculate_value_history(transactions_df, history):
     transactions_df['cost'] = transactions_df['quantity']*transactions_df['share_price']
-    trades=transactions_df.groupby(['tran_date','symbol'],as_index=False).agg({'quantity':'sum','cost':sum})
+    trades=transactions_df.groupby(['tran_date','symbol'],as_index=False).agg({'quantity':'sum','cost':'sum'})
     trades['tran_date']=pd.to_datetime(trades['tran_date'])
     history.index = pd.to_datetime(history.index)
     trades=trades.pivot(columns='symbol',index='tran_date')
     total_cost = sum(transactions_df.apply(lambda x: abs(x['quantity'])*x['share_price'] if x['tran_type'] == 'BUY' else 0, axis=1))
+    total_sell = sum(transactions_df.apply(lambda x: abs(x['quantity'])*x['share_price'] if x['tran_type'] == 'SELL' else 0, axis=1))
 
     qhistory=pd.DataFrame(index=history.index).merge(trades['quantity'],left_index=True, right_index=True,how='outer')
     qhistory=qhistory.fillna(0).cumsum(axis=0)
@@ -101,15 +102,16 @@ def calculate_value_history(transactions_df, history):
     cost_history = pd.DataFrame(chistory.sum(axis=1),columns=['cost'])
 
     value_history = value_history.merge(cost_history,left_index=True, right_index=True)
-    value_history['adj_value'] = value_history['value']-value_history['cost']+total_cost
-    
+    value_history['adj_value'] = value_history['value']-value_history['cost']+total_cost-total_sell
+    value_history['adj_value2'] = value_history['value']-value_history['cost']+total_cost
+    start_ind = value_history[value_history['value'] != 0].index[0]
+    value_history = value_history[start_ind:]
     return value_history
 
 def get_history_graph(timeframe, adj=False, comp=None):
     '''Calculate and format the user's portfolio history graph
     '''
     if g.user:
-
         history = pd.DataFrame(session.get('history'))
         transactions_df = pd.DataFrame(session.get('transactions_df'))
         info = session.get('info')
@@ -118,21 +120,21 @@ def get_history_graph(timeframe, adj=False, comp=None):
 
         if isinstance(transactions_df, pd.DataFrame) and len(transactions_df) > 0:
             value_history = calculate_value_history(transactions_df, history)
-            value_history['s&p'] = np.cumprod(history['^GSPC'].pct_change().fillna(0)+1)*value_history['adj_value'][0]
-            value_history['dji'] = np.cumprod(history['^DJI'].pct_change().fillna(0)+1)*value_history['adj_value'][0]
-            value_history['nasdaq'] = np.cumprod(history['^IXIC'].pct_change().fillna(0)+1)*value_history['adj_value'][0]
+            value_history['s&p'] = np.cumprod(history['^GSPC'].pct_change().fillna(0)+1)*value_history['adj_value'].iloc[0]
+            value_history['dji'] = np.cumprod(history['^DJI'].pct_change().fillna(0)+1)*value_history['adj_value'].iloc[0]
+            value_history['nasdaq'] = np.cumprod(history['^IXIC'].pct_change().fillna(0)+1)*value_history['adj_value'].iloc[0]
             value_history['value']=pd.to_numeric(value_history['value'])
             
             # append current value
-            if value_history.index[-1] != pd.Timestamp.today().normalize():
-                db = get_db()
-                positions = pd.read_sql_query('''SELECT * FROM positions WHERE user_id = ?''',db,params=(g.user['id'],))
-                prices = {}
-                for symbol in info.keys():
-                    prices[symbol] = info[symbol]['price']
-                positions['mkt_val'] = positions['symbol'].map(prices)*positions['quantity']
-                curr_value = sum(positions['mkt_val'])
-                value_history = pd.concat([value_history,pd.DataFrame({'value':curr_value}, index=[pd.Timestamp.today().normalize()])])
+            # if value_history.index[-1] != pd.Timestamp.today().normalize():
+            #     db = get_db()
+            #     positions = pd.read_sql_query('''SELECT * FROM positions WHERE user_id = ?''',db,params=(g.user['id'],))
+            #     prices = {}
+            #     for symbol in info.keys():
+            #         prices[symbol] = info[symbol]['price']
+            #     positions['mkt_val'] = positions['symbol'].map(prices)*positions['quantity']
+            #     curr_value = sum(positions['mkt_val'])
+            #     value_history = pd.concat([value_history,pd.DataFrame({'value':curr_value}, index=[pd.Timestamp.today().normalize()])])
             
             # timeframe
             if timeframe:
@@ -140,20 +142,20 @@ def get_history_graph(timeframe, adj=False, comp=None):
                     value_history = value_history[value_history.index >= datetime.today()-timedelta(days=int(timeframe))]
                 except:
                     pass
-            
+
             # adjusted
             plot_col = 'value'
-            if adj or comp:
+            if adj == "True" or comp:
                 plot_col = 'adj_value'
-            
+
             color = 'green'
-            if value_history['value'].astype(float).values[-1] < value_history['value'].astype(float).values[0]:
+            if value_history['adj_value'].astype(float).values[-1] < value_history['adj_value'].astype(float).values[0]:
                 color = 'red'
-                
+            
             fig = go.Figure()
             fig.add_trace(go.Scatter(
                 x=value_history.index,
-                y=value_history['value'].astype(float).values.tolist(),
+                y=value_history[plot_col].astype(float).values.tolist(),
                 mode='lines',
                 name='Your Portfolio',
                 line=dict(
@@ -171,7 +173,7 @@ def get_history_graph(timeframe, adj=False, comp=None):
                 mode='lines',
                 name=comp.upper(),
                 line=dict(
-                    color='blue,  
+                    color='blue',  
                     width=2,       
                     dash='solid'   
                     )
@@ -337,10 +339,11 @@ def get_summary_numbers2():
 def calc_ror(data, offset):
     if offset == 'all':
         offset = (data.index[-1]-data.index[0]).days
-    else:
-        start = datetime.today()-timedelta(days=int(offset))
-        data = data[data.index >= start]
-    total_r=data[-1]/data[0]
+    start = datetime.today()-timedelta(days=int(offset))
+    if start < data.index[0]:
+        return 0
+    data = data[data.index >= start]
+    total_r=data.iloc[-1]/data.iloc[0]
     N = offset/365.25
     return total_r**(1/N)-1
 
@@ -364,25 +367,43 @@ def simple_linear_regression(x, y):
 def calc_beta_alpha(data, offset):
     if offset != 'all':
         start = datetime.today()-timedelta(days=int(offset))
+        if start < data.index[0]:
+            return 0,0
         data = data[data.index >= start]
-    porto_returns = data['adj_value'].pct_change().dropna()
+    porto_returns = data['value'].pct_change().dropna()
     comp_returns = data['s&p'].pct_change().dropna()
+    if offset == 365:
+        print(porto_returns.iloc[-150:-100])
     beta, alpha = simple_linear_regression(comp_returns, porto_returns)
     return beta, alpha
 
-def get_advanced_metrics():
+def calculate_sharpe_ratio(data, offset):
+    if offset != 'all':
+        start = datetime.today()-timedelta(days=int(offset))
+        if start < data.index[0]:
+            return 0,0
+        data = data[data.index >= start]
+    rx = np.mean(data['adj_value2'].pct_change().dropna())
+    rf = np.mean(data['tips'])/100/252
+    std = np.std(data['adj_value2'].pct_change().dropna())
+    print(rx, rf, std)
+    return ((rx-rf)/std)*np.sqrt(252)
+
+def get_metrics():
     if g.user:
     
         history = pd.DataFrame(session.get('history'))
         transactions_df = pd.DataFrame(session.get('transactions_df'))
         if isinstance(transactions_df, pd.DataFrame) and len(transactions_df) > 0:
             value_history = calculate_value_history(transactions_df, history)
-            value_history['s&p'] = np.cumprod(history['^GSPC'].pct_change().fillna(0)+1)*value_history['adj_value'][0]
-            ror = [calc_ror(value_history['adj_value'], off) for off in [30,91,182,365,1095,'all']]
+            value_history['s&p'] = np.cumprod(history['^GSPC'].pct_change().fillna(0)+1)*value_history['adj_value'].iloc[0]
+            value_history['tips'] = history['^TNX']
+            ror = [calc_ror(value_history['adj_value2'], off) for off in [30,91,182,365,1095,'all']]
             alpha_beta = [calc_beta_alpha(value_history, off) for off in [30,91,182,365,1095,'all']]
-            metrics=pd.concat([pd.DataFrame(ror).T, pd.DataFrame(alpha_beta).T])
+            sharpe = [calculate_sharpe_ratio(value_history, off) for off in [30,91,182,365,1095,'all']]
+            metrics=pd.concat([pd.DataFrame(ror).T, pd.DataFrame(alpha_beta).T, pd.DataFrame(sharpe).T])
             metrics.columns=['1M','3M','6M','1Y','3Y','All']
-            metrics.index=['Annualized ROR','Beta','Alpha']
+            metrics.index=['Annualized ROR','Beta','Alpha','Sharpe Ratio']
             
             styles = [
                 dict(selector="th", props=[("font-size", "12px")]) 
@@ -393,7 +414,7 @@ def get_advanced_metrics():
                 .set_properties(**{'font-size': '10pt'})
                 .map(color_positive_green, subset=(['Annualized ROR'], slice(None)))
                 .format("{:.2%}", subset=(['Annualized ROR'], slice(None)))
-                .format("{:.3f}", subset=(['Beta','Alpha'], slice(None)))
+                .format("{:.3f}", subset=(['Beta','Alpha','Sharpe Ratio'], slice(None)))
                 .set_table_styles(styles)
                 .set_properties(header="true", justify='left')
                 .set_table_attributes('class="table table-hover table-sm"')

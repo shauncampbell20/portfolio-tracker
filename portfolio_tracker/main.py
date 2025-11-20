@@ -6,7 +6,9 @@ from werkzeug.exceptions import abort
 import pandas as pd
 from portfolio_tracker.auth import login_required
 from portfolio_tracker.db import get_db
-from portfolio_tracker.helpers import get_positions_table, get_history_graph, get_allocations_graph, get_summary_numbers, get_summary_numbers2
+from portfolio_tracker.helpers import (
+    get_positions_table, get_history_graph, get_allocations_graph, get_summary_numbers, get_summary_numbers2, get_metrics
+) 
 from portfolio_tracker.controller import controller
 
 bp = Blueprint('main', __name__)
@@ -22,7 +24,9 @@ def history_endpoint():
     '''Get history graph
     '''
     timeframe = request.args.get('tf')
-    return get_history_graph(timeframe)
+    adj = request.args.get('adj')
+    print(adj)
+    return get_history_graph(timeframe, adj)
 
 @bp.route('/positions', methods=('GET','POST'))
 def positions_endpoint():
@@ -42,6 +46,12 @@ def summary_endpoint():
     '''Get summary data for cards
     '''
     return get_summary_numbers2()
+
+@bp.route('/metrics', methods=('GET','POST'))
+def metrics_endpoint():
+    '''Get summary data for cards
+    '''
+    return get_metrics()
 
 @bp.route('/refresh', methods=('GET','POST'))
 def refresh():

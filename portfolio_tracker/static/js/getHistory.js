@@ -1,7 +1,11 @@
-function getHistory(tf) {
+function getHistory() {
     // function to get graph with fetch and render with Plotly
     // const url = "{{ url_for('main.history_endpoint') }}?tf="+tf;
-    fetch(window.historyUrl+tf)
+    
+    setTimeout(() => {
+        histUrl = window.historyUrl+'?tf='+window.tf+'&adj='+window.adj
+        console.log(histUrl);
+        fetch(histUrl)
         .then(resp => {
             if (resp.status == 204) {
             console.log('no content');
@@ -19,5 +23,7 @@ function getHistory(tf) {
             Plotly.setPlotConfig(config);
             Plotly.newPlot('history-graph', data, {}, config);
         })
+    }, 10);
+
     };
     document.addEventListener('DOMContentLoaded', getHistory);

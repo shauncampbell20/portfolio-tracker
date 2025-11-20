@@ -75,7 +75,7 @@ class Controller:
         # Upload
         elif action == 'upload':
             # Check if have info for all symbol. If not, update cache
-            symbols = tran['symbol'].unique()
+            symbols = list(tran['symbol'].unique())
             self.update_info(symbols)
             if len(self.errors) > 0:
                 return self.errors
@@ -150,7 +150,7 @@ class Controller:
             db = get_db()
             positions = db.execute('''SELECT DISTINCT symbol FROM transactions WHERE user_id = ? ''', (g.user['id'],)).fetchall()
             new_symbols = [p[0] for p in positions]
-        new_symbols.extend(['^GSPC','^DJI','^IXIC']) # add indexes for comparisons
+        new_symbols.extend(['^GSPC','^DJI','^IXIC','^TNX']) # add indexes for comparisons
         
         if not dt: # no minimum date provided
             db = get_db()
