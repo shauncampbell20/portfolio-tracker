@@ -192,7 +192,7 @@ class Controller:
             try:
                 print('min date:',min_date)
                 tickers=yf.Tickers(' '.join(symbols))
-                history = tickers.history(start=min_date.strftime('%Y-%m-%d'),period=None,interval='1d')
+                history = tickers.history(start=min_date.strftime('%Y-%m-%d'),period=None,interval='1d',auto_adjust=False)
                 history=history['Close'].dropna()
                 history.index = history.index.strftime('%Y-%m-%d')
                 session['history'] = history.to_dict()

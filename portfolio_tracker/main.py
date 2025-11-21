@@ -25,8 +25,11 @@ def history_endpoint():
     '''
     timeframe = request.args.get('tf')
     adj = request.args.get('adj')
+    comp = request.args.get('comp')
+    if comp == 'sp':
+        comp = 's&p'
     print(adj)
-    return get_history_graph(timeframe, adj)
+    return get_history_graph(timeframe, adj, comp)
 
 @bp.route('/positions', methods=('GET','POST'))
 def positions_endpoint():
@@ -51,7 +54,10 @@ def summary_endpoint():
 def metrics_endpoint():
     '''Get summary data for cards
     '''
-    return get_metrics()
+    comp = request.args.get('comp')
+    if comp == 'sp':
+        comp = 's&p'
+    return get_metrics(comp)
 
 @bp.route('/refresh', methods=('GET','POST'))
 def refresh():

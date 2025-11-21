@@ -111,6 +111,8 @@ def calculate_value_history(transactions_df, history):
 def get_history_graph(timeframe, adj=False, comp=None):
     '''Calculate and format the user's portfolio history graph
     '''
+    if comp == 'undefined':
+        comp = None
     if g.user:
         history = pd.DataFrame(session.get('history'))
         transactions_df = pd.DataFrame(session.get('transactions_df'))
@@ -120,32 +122,23 @@ def get_history_graph(timeframe, adj=False, comp=None):
 
         if isinstance(transactions_df, pd.DataFrame) and len(transactions_df) > 0:
             value_history = calculate_value_history(transactions_df, history)
-            value_history['s&p'] = np.cumprod(history['^GSPC'].pct_change().fillna(0)+1)*value_history['adj_value'].iloc[0]
-            value_history['dji'] = np.cumprod(history['^DJI'].pct_change().fillna(0)+1)*value_history['adj_value'].iloc[0]
-            value_history['nasdaq'] = np.cumprod(history['^IXIC'].pct_change().fillna(0)+1)*value_history['adj_value'].iloc[0]
             value_history['value']=pd.to_numeric(value_history['value'])
-            
-            # append current value
-            # if value_history.index[-1] != pd.Timestamp.today().normalize():
-            #     db = get_db()
-            #     positions = pd.read_sql_query('''SELECT * FROM positions WHERE user_id = ?''',db,params=(g.user['id'],))
-            #     prices = {}
-            #     for symbol in info.keys():
-            #         prices[symbol] = info[symbol]['price']
-            #     positions['mkt_val'] = positions['symbol'].map(prices)*positions['quantity']
-            #     curr_value = sum(positions['mkt_val'])
-            #     value_history = pd.concat([value_history,pd.DataFrame({'value':curr_value}, index=[pd.Timestamp.today().normalize()])])
             
             # timeframe
             if timeframe:
                 try:
                     value_history = value_history[value_history.index >= datetime.today()-timedelta(days=int(timeframe))]
+                    
                 except:
                     pass
 
+            history = history[history.index >= value_history.index[0]]
+            value_history['s&p'] = np.cumprod(history['^GSPC'].pct_change().fillna(0)+1)*value_history['adj_value'].iloc[0]
+            value_history['dji'] = np.cumprod(history['^DJI'].pct_change().fillna(0)+1)*value_history['adj_value'].iloc[0]
+            value_history['nasdaq'] = np.cumprod(history['^IXIC'].pct_change().fillna(0)+1)*value_history['adj_value'].iloc[0]
             # adjusted
             plot_col = 'value'
-            if adj == "True" or comp:
+            if adj == "True":
                 plot_col = 'adj_value'
 
             color = 'green'
@@ -364,61 +357,93 @@ def simple_linear_regression(x, y):
     
     return m, c
 
-def calc_beta_alpha(data, offset):
+def calc_beta_alpha(data, col, offset):
     if offset != 'all':
         start = datetime.today()-timedelta(days=int(offset))
         if start < data.index[0]:
             return 0,0
         data = data[data.index >= start]
-    porto_returns = data['value'].pct_change().dropna()
+    porto_returns = data[col].pct_change().dropna()
     comp_returns = data['s&p'].pct_change().dropna()
-    if offset == 365:
-        print(porto_returns.iloc[-150:-100])
     beta, alpha = simple_linear_regression(comp_returns, porto_returns)
     return beta, alpha
 
-def calculate_sharpe_ratio(data, offset):
+def calculate_sharpe_ratio(data, col, offset):
     if offset != 'all':
         start = datetime.today()-timedelta(days=int(offset))
         if start < data.index[0]:
             return 0,0
         data = data[data.index >= start]
-    rx = np.mean(data['adj_value2'].pct_change().dropna())
+    rx = np.mean(data[col].pct_change().dropna())
     rf = np.mean(data['tips'])/100/252
-    std = np.std(data['adj_value2'].pct_change().dropna())
-    print(rx, rf, std)
+    std = np.std(data[col].pct_change().dropna())
     return ((rx-rf)/std)*np.sqrt(252)
 
-def get_metrics():
+def get_metrics(comp=None):
+    if comp == 'undefined':
+        comp = None
     if g.user:
     
         history = pd.DataFrame(session.get('history'))
         transactions_df = pd.DataFrame(session.get('transactions_df'))
         if isinstance(transactions_df, pd.DataFrame) and len(transactions_df) > 0:
             value_history = calculate_value_history(transactions_df, history)
-            value_history['s&p'] = np.cumprod(history['^GSPC'].pct_change().fillna(0)+1)*value_history['adj_value'].iloc[0]
+            value_history['s&p'] = history['^GSPC']
+            value_history['dji'] = history['^DJI']
+            value_history['nasdaq'] = history['^IXIC']
             value_history['tips'] = history['^TNX']
-            ror = [calc_ror(value_history['adj_value2'], off) for off in [30,91,182,365,1095,'all']]
-            alpha_beta = [calc_beta_alpha(value_history, off) for off in [30,91,182,365,1095,'all']]
-            sharpe = [calculate_sharpe_ratio(value_history, off) for off in [30,91,182,365,1095,'all']]
-            metrics=pd.concat([pd.DataFrame(ror).T, pd.DataFrame(alpha_beta).T, pd.DataFrame(sharpe).T])
-            metrics.columns=['1M','3M','6M','1Y','3Y','All']
-            metrics.index=['Annualized ROR','Beta','Alpha','Sharpe Ratio']
             
+            ror = [calc_ror(value_history['adj_value2'], off) for off in [30,91,182,365,1095,'all']]
+            alpha_beta = [calc_beta_alpha(value_history, 'value', off) for off in [30,91,182,365,1095,'all']]
+            sharpe = [calculate_sharpe_ratio(value_history,'adj_value2', off) for off in [30,91,182,365,1095,'all']]
+            
+            if comp:
+                ror_comp = [calc_ror(value_history['s&p'], off) for off in [30,91,182,365,1095,'all']]
+                alpha_beta_comp = [calc_beta_alpha(value_history, comp, off) for off in [30,91,182,365,1095,'all']]
+                sharpe_comp = [calculate_sharpe_ratio(value_history, comp, off) for off in [30,91,182,365,1095,'all']]
+                metrics=pd.concat([pd.DataFrame(ror).T, pd.DataFrame(ror_comp).T, pd.DataFrame(alpha_beta).T, pd.DataFrame(alpha_beta_comp).T, pd.DataFrame(sharpe).T, pd.DataFrame(sharpe_comp).T])
+                metrics.index=['Annualized ROR',comp.upper()+' Annualized ROR','Beta','Alpha',comp.upper()+' Beta',comp.upper()+' Alpha','Sharpe Ratio',comp.upper()+' Sharpe Ratio']
+                metrics = metrics.reindex(['Annualized ROR',comp.upper()+' Annualized ROR','Beta',comp.upper()+' Beta','Alpha',comp.upper()+' Alpha','Sharpe Ratio',comp.upper()+' Sharpe Ratio'])
+                pctsubset = ['Annualized ROR',comp.upper()+' Annualized ROR']
+                fltsubset = ['Beta','Alpha','Sharpe Ratio',comp.upper()+' Beta',comp.upper()+' Alpha',comp.upper()+' Sharpe Ratio']
+                #fillsubset = [comp.upper()+' Annualized ROR',comp.upper()+' Beta',comp.upper()+' Alpha',comp.upper()+' Sharpe Ratio']
+                attr = 'class="table table table-striped table-sm'
+            else:
+                metrics=pd.concat([pd.DataFrame(ror).T, pd.DataFrame(alpha_beta).T, pd.DataFrame(sharpe).T])
+                metrics.index=['Annualized ROR','Beta','Alpha','Sharpe Ratio']
+                pctsubset = ['Annualized ROR']
+                fltsubset = ['Beta','Alpha','Sharpe Ratio']
+                #fillsubset=[]
+                attr = 'class="table table-hover table-sm'
+            metrics.columns=['1M','3M','6M','1Y','3Y','All']
+            print(metrics)
             styles = [
                 dict(selector="th", props=[("font-size", "12px")]) 
             ]
 
-            html = (
-                metrics.style
-                .set_properties(**{'font-size': '10pt'})
-                .map(color_positive_green, subset=(['Annualized ROR'], slice(None)))
-                .format("{:.2%}", subset=(['Annualized ROR'], slice(None)))
-                .format("{:.3f}", subset=(['Beta','Alpha','Sharpe Ratio'], slice(None)))
-                .set_table_styles(styles)
-                .set_properties(header="true", justify='left')
-                .set_table_attributes('class="table table-hover table-sm"')
-                .to_html()
-            )
+            if comp:
+                html = (
+                    metrics.style
+                    .set_properties(**{'font-size': '10pt'})
+                    .map(color_positive_green, subset=(['Annualized ROR',comp.upper()+' Annualized ROR'], slice(None)))
+                    .format("{:.2%}", subset=(['Annualized ROR',comp.upper()+' Annualized ROR'], slice(None)))
+                    .format("{:.3f}", subset=(['Beta',comp.upper()+' Beta','Alpha',comp.upper()+' Alpha','Sharpe Ratio',comp.upper()+' Sharpe Ratio'], slice(None)))
+                    .set_table_styles(styles)
+                    .set_properties(header="true", justify='left')
+                    .set_table_attributes('class="table table-hover table-striped table-sm"')
+                    .to_html()
+                )
+            else:
+                html = (
+                    metrics.style
+                    .set_properties(**{'font-size': '10pt'})
+                    .map(color_positive_green, subset=(['Annualized ROR'], slice(None)))
+                    .format("{:.2%}", subset=(['Annualized ROR'], slice(None)))
+                    .format("{:.3f}", subset=(['Beta','Alpha','Sharpe Ratio'], slice(None)))
+                    .set_table_styles(styles)
+                    .set_properties(header="true", justify='left')
+                    .set_table_attributes('class="table table-hover table-sm"')
+                    .to_html()
+                )
             
             return html

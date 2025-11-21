@@ -1,6 +1,9 @@
-document.addEventListener('DOMContentLoaded', function() {
+function getMetricsTable() {
 // Function to get positions table with fetch and render HTML
-fetch(window.metricsUrl)
+setTimeout(() => {
+    Url = window.metricsUrl+'?comp='+window.compare
+    console.log(Url);
+    fetch(Url)
     .then(response => {
             if (!response.ok) {
                 throw new Error('Network response was not ok');
@@ -16,4 +19,7 @@ fetch(window.metricsUrl)
     .catch(error => {
         console.error('Error fetching HTML:', error);
     });
-});
+    }, 10);
+};
+document.addEventListener('DOMContentLoaded', getMetricsTable);
+

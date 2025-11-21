@@ -3,7 +3,7 @@ function getHistory() {
     // const url = "{{ url_for('main.history_endpoint') }}?tf="+tf;
     
     setTimeout(() => {
-        histUrl = window.historyUrl+'?tf='+window.tf+'&adj='+window.adj
+        histUrl = window.historyUrl+'?tf='+window.tf+'&adj='+window.adj+'&comp='+window.compare
         console.log(histUrl);
         fetch(histUrl)
         .then(resp => {

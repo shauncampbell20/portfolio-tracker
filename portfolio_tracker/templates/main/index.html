@@ -48,15 +48,36 @@
           <div class="card-body" >
             <h5 class="card-title">Historical Portfolio Value</h5>
             <!-- Time range buttons -->
-            <div class="btn-group" role="group">
-              <button id = "btn-1mo" class="btn btn-sm btn-outline-primary" onclick="getHistory()" role="button">1 Mo</button>
-              <button id = "btn-3mo" class="btn btn-sm btn-outline-primary" onclick="getHistory()" role="button">3 Mo</button>
-              <button id = "btn-6mo" class="btn btn-sm btn-outline-primary" onclick="getHistory()" role="button">6 Mo</button>
-              <button id = "btn-1yr" class="btn btn-sm btn-outline-primary" onclick="getHistory()" role="button">1 Yr</button>
-              <button id = "btn-3yr" class="btn btn-sm btn-outline-primary" onclick="getHistory()" role="button">3 Yr</button>
-              <button id = "btn-all" class="btn btn-sm btn-outline-primary active" onclick="getHistory()" role="button">All</button>
+            <div class="container">
+              <div class="row">
+                <div class="col-md-4">
+                  <div class="btn-group" role="group">
+                    <button id = "btn-1mo" class="btn btn-sm btn-outline-primary" onclick="getHistory()" role="button">1 Mo</button>
+                    <button id = "btn-3mo" class="btn btn-sm btn-outline-primary" onclick="getHistory()" role="button">3 Mo</button>
+                    <button id = "btn-6mo" class="btn btn-sm btn-outline-primary" onclick="getHistory()" role="button">6 Mo</button>
+                    <button id = "btn-1yr" class="btn btn-sm btn-outline-primary" onclick="getHistory()" role="button">1 Yr</button>
+                    <button id = "btn-3yr" class="btn btn-sm btn-outline-primary" onclick="getHistory()" role="button">3 Yr</button>
+                    <button id = "btn-all" class="btn btn-sm btn-outline-primary active" onclick="getHistory()" role="button">All</button>
+                  </div>
+                </div>
+                <div class="col-md-2">
+                  <button id = "btn-adjust" class="btn btn-sm btn-outline-primary" onclick="getHistory()" role="button" data-bs-toggle="button">Adjust Buy/Sell</button>
+                </div>
+                <div class="col-md-6">
+                  <div class="dropdown">
+                    <button class="btn btn-sm btn-outline-primary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                      Compare
+                    </button>
+                    <ul class="dropdown-menu">
+                      <li><button class="dropdown-item" id = "compare-none" onclick="getHistory(); getMetricsTable()">None</button></li>
+                      <li><button class="dropdown-item" id = "compare-sp" onclick="getHistory(); getMetricsTable()">S&P 500</button></li>
+                      <li><button class="dropdown-item" id = "compare-dji" onclick="getHistory(); getMetricsTable()">Dow Jones</button></li>
+                      <li><button class="dropdown-item" id = "compare-nasdaq" onclick="getHistory(); getMetricsTable()">NASDAQ</button></li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
             </div>
-            <button id = "btn-adjust" class="btn btn-sm btn-outline-primary" onclick="getHistory()" role="button" data-bs-toggle="button">Adjust Buy/Sell</button>
 
             <!-- History graph -->
             <div id="history-graph">Loading...</div>
