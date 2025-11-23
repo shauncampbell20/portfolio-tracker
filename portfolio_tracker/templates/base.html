@@ -23,6 +23,19 @@
             <a class="nav-link" href="{{ url_for('main.refresh') }}">Refresh</a>
         </li>
         <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="#" role="button" aria-expanded="false">Filter</a>
+            <ul class="dropdown-menu px-4 py-3">
+              {% for row in session['info'].keys() %}
+              <li>
+                <div class="form-check form-switch">
+                  <input class="form-check-input" type="checkbox" role="switch" id="{{row}}-toggle" checked>
+                  <label class="form-check-label" for="checkIndeterminateDisabled">{{ row }}</label>
+                </div>
+              </li>
+              {% endfor %}
+            </ul>
+        </li>
+        <li class="nav-item dropdown">
             <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="#" role="button" aria-expanded="false">Transactions</a>
             <ul class="dropdown-menu dropdown-menu-">
               <li><a class="dropdown-item" href="{{ url_for('transactions.enter') }}">Enter</a></li>

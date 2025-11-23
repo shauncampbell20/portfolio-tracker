@@ -3,7 +3,7 @@ function getHistory() {
     // const url = "{{ url_for('main.history_endpoint') }}?tf="+tf;
     
     setTimeout(() => {
-        histUrl = window.historyUrl+'?tf='+window.tf+'&adj='+window.adj+'&comp='+window.compare
+        histUrl = window.historyUrl+'?tf='+window.tf+'&adj='+window.adj+'&comp='+window.compare+'&excluded='+window.excluded.join(',')
         console.log(histUrl);
         fetch(histUrl)
         .then(resp => {
@@ -26,4 +26,4 @@ function getHistory() {
     }, 10);
 
     };
-    document.addEventListener('DOMContentLoaded', getHistory);
+    // document.addEventListener('DOMContentLoaded', getHistory);

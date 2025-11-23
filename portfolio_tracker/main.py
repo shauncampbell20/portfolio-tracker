@@ -26,29 +26,33 @@ def history_endpoint():
     timeframe = request.args.get('tf')
     adj = request.args.get('adj')
     comp = request.args.get('comp')
+    excluded = request.args.get('excluded')
     if comp == 'sp':
         comp = 's&p'
     print(adj)
-    return get_history_graph(timeframe, adj, comp)
+    return get_history_graph(timeframe, adj, comp, excluded)
 
 @bp.route('/positions', methods=('GET','POST'))
 def positions_endpoint():
     '''Get positions table
     '''
-    return get_positions_table()
+    excluded = request.args.get('excluded')
+    return get_positions_table(excluded)
 
 @bp.route('/allocations', methods=('GET','POST'))
 def allocations_endpoint():
     '''Get allocations graph
     '''
     disp = request.args.get('disp')
-    return get_allocations_graph(disp)
+    excluded = request.args.get('excluded')
+    return get_allocations_graph(disp, excluded)
 
 @bp.route('/summary', methods=('GET','POST'))
 def summary_endpoint():
     '''Get summary data for cards
     '''
-    return get_summary_numbers2()
+    excluded = request.args.get('excluded')
+    return get_summary_numbers2(excluded)
 
 @bp.route('/metrics', methods=('GET','POST'))
 def metrics_endpoint():
@@ -57,7 +61,8 @@ def metrics_endpoint():
     comp = request.args.get('comp')
     if comp == 'sp':
         comp = 's&p'
-    return get_metrics(comp)
+    excluded = request.args.get('excluded')
+    return get_metrics(comp, excluded)
 
 @bp.route('/refresh', methods=('GET','POST'))
 def refresh():

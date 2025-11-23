@@ -1,6 +1,7 @@
-document.addEventListener('DOMContentLoaded', function() {
+function getSummary() {
 // Function to get positions table with fetch and render HTML
-fetch(window.summaryUrl)
+    Url = window.summaryUrl+'?excluded='+window.excluded.join(',')
+    fetch(Url)
     .then(response => {
             if (!response.ok) {
                 throw new Error('Network response was not ok');
@@ -27,4 +28,4 @@ fetch(window.summaryUrl)
     .catch(error => {
         console.error('Error fetching HTML:', error);
     });
-});
+};

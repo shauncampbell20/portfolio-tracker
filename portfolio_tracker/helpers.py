@@ -24,7 +24,7 @@ def color_positive_green(val):
         color = 'black'
     return f'color: {color}'
 
-def get_positions_table():
+def get_positions_table(excluded=None):
     '''Calculate and format the user's table of positions
     '''
     if g.user:
@@ -39,6 +39,11 @@ def get_positions_table():
 
         db = get_db()
         positions = pd.read_sql_query('''SELECT * FROM positions WHERE user_id = ?''', db, params=(g.user['id'],))
+
+        if excluded:
+            to_exclude = excluded.split(',')
+            positions = positions[~positions['symbol'].isin(to_exclude)]
+
         if len(positions) > 0:
             positions['cost_basis']=positions['cost_basis'].apply(lambda x: round(x,2))
             positions['last_price']=positions['symbol'].map(prices)
@@ -108,7 +113,7 @@ def calculate_value_history(transactions_df, history):
     value_history = value_history[start_ind:]
     return value_history
 
-def get_history_graph(timeframe, adj=False, comp=None):
+def get_history_graph(timeframe, adj=False, comp=None, excluded=None):
     '''Calculate and format the user's portfolio history graph
     '''
     if comp == 'undefined':
@@ -121,6 +126,12 @@ def get_history_graph(timeframe, adj=False, comp=None):
             return Response(status=204)
 
         if isinstance(transactions_df, pd.DataFrame) and len(transactions_df) > 0:
+            if excluded:
+                to_exclude = excluded.split(',')
+                transactions_df = transactions_df[~transactions_df['symbol'].isin(to_exclude)]
+                if len(transactions_df) == 0:
+                    return Response(status=204)
+
             value_history = calculate_value_history(transactions_df, history)
             value_history['value']=pd.to_numeric(value_history['value'])
             
@@ -185,7 +196,7 @@ def get_history_graph(timeframe, adj=False, comp=None):
         else:
             return Response(status=204)
 
-def get_allocations_graph(disp):
+def get_allocations_graph(disp, excluded=None):
     if g.user:
         
         # get positions
@@ -193,7 +204,12 @@ def get_allocations_graph(disp):
         info = session.get('info')
         if not info:
             return Response(status=204)
+        
         positions = positions=pd.read_sql_query('''SELECT * FROM positions WHERE user_id = ?''',db,params=(g.user['id'],))
+        if excluded:
+            to_exclude = excluded.split(',')
+            positions = positions[~positions['symbol'].isin(to_exclude)]
+
         if len(positions) > 0:
             
             prices = {}
@@ -268,11 +284,14 @@ def get_allocations_graph(disp):
         else:
             return Response(status=204)
 
-def get_summary_numbers():
+def get_summary_numbers(excluded=None):
     if g.user:
 
         db = get_db()
         positions = positions=pd.read_sql_query('''SELECT * FROM positions WHERE user_id = ?''',db,params=(g.user['id'],))
+        if excluded:
+            to_exclude = excluded.split(',')
+            positions = positions[~positions['symbol'].isin(to_exclude)]
         prices = {}
         previous_closes = {}
         info = session.get('info')
@@ -319,8 +338,8 @@ def get_summary_numbers():
     else:
         return None, None, None, None, None
 
-def get_summary_numbers2():
-    curr_value_str, daily_str, tot_str, dgl_col, tot_col = get_summary_numbers()
+def get_summary_numbers2(excluded=None):
+    curr_value_str, daily_str, tot_str, dgl_col, tot_col = get_summary_numbers(excluded)
     return {
         'curr_value_str':curr_value_str,
         'daily_str':daily_str,
@@ -372,14 +391,15 @@ def calculate_sharpe_ratio(data, col, offset):
     if offset != 'all':
         start = datetime.today()-timedelta(days=int(offset))
         if start < data.index[0]:
-            return 0,0
+            return 0
         data = data[data.index >= start]
     rx = np.mean(data[col].pct_change().dropna())
     rf = np.mean(data['tips'])/100/252
     std = np.std(data[col].pct_change().dropna())
+    print(offset, rx, rf, std)
     return ((rx-rf)/std)*np.sqrt(252)
 
-def get_metrics(comp=None):
+def get_metrics(comp=None, excluded=None):
     if comp == 'undefined':
         comp = None
     if g.user:
@@ -387,12 +407,18 @@ def get_metrics(comp=None):
         history = pd.DataFrame(session.get('history'))
         transactions_df = pd.DataFrame(session.get('transactions_df'))
         if isinstance(transactions_df, pd.DataFrame) and len(transactions_df) > 0:
+            if excluded:
+                to_exclude = excluded.split(',')
+                transactions_df = transactions_df[~transactions_df['symbol'].isin(to_exclude)]
+                if len(transactions_df) == 0:
+                    return Response(status=204)
+
             value_history = calculate_value_history(transactions_df, history)
             value_history['s&p'] = history['^GSPC']
             value_history['dji'] = history['^DJI']
             value_history['nasdaq'] = history['^IXIC']
             value_history['tips'] = history['^TNX']
-            
+            print(value_history)
             ror = [calc_ror(value_history['adj_value2'], off) for off in [30,91,182,365,1095,'all']]
             alpha_beta = [calc_beta_alpha(value_history, 'value', off) for off in [30,91,182,365,1095,'all']]
             sharpe = [calculate_sharpe_ratio(value_history,'adj_value2', off) for off in [30,91,182,365,1095,'all']]

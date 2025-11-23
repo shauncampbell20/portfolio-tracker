@@ -1,7 +1,7 @@
 function getMetricsTable() {
 // Function to get positions table with fetch and render HTML
 setTimeout(() => {
-    Url = window.metricsUrl+'?comp='+window.compare
+    Url = window.metricsUrl+'?comp='+window.compare+'&excluded='+window.excluded.join(',')
     console.log(Url);
     fetch(Url)
     .then(response => {
@@ -21,5 +21,5 @@ setTimeout(() => {
     });
     }, 10);
 };
-document.addEventListener('DOMContentLoaded', getMetricsTable);
+// document.addEventListener('DOMContentLoaded', getMetricsTable);
 
