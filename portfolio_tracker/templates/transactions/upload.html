@@ -3,10 +3,11 @@
 {% block content %}
 <div class="d-flex justify-content-center align-items-center min-vh-90">
   <div class="p-5 m-3 border bg-white w-50">
-    <form method="post" enctype="multipart/form-data">
+    <form method="post" id="uploadForm" enctype="multipart/form-data">
       <h1 class="h3 mb-3 fw-normal">Transaction Upload</h1>
 
       <!-- Flash Messages -->
+      <div class="alert d-none" role="alert" id="upload-flash"></div>
       {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
           {% for category, message in messages %}
@@ -41,10 +42,14 @@
         <select name="price_select" class="form-select" id="price_select" required>
         </select>
         <div class="p-3"></div>
-      <button class="btn btn-primary w-100 py-2" type="submit" value="Upload">Submit</button>
+      <button class="btn btn-primary w-100 py-2" type="submit" id="uploadButton">
+      <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true" id="uploadSpinner"></span>
+      Upload</button>
+      <!-- <button class="btn btn-primary w-100 py-2" type="submit" value="Upload">Submit</button> -->
       
     </form>
     <script src="{{ url_for('static', filename='js/parseUpload.js') }}"></script>
+    <script type="text/javascript" src="{{ url_for('static', filename='js/uploadTransactions.js') }}"></script>
   </div>
 </div>
 {% endblock %}

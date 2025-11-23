@@ -6,6 +6,7 @@
         <h1 class="h3 mb-3 fw-normal">Your Transactions</h1>
 
         <!-- Flash Messages -->
+        <div class="alert d-none" role="alert" id="edit-flash"></div>
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 {% for category, message in messages %}

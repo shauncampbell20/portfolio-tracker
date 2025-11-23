@@ -473,3 +473,5 @@ def get_metrics(comp=None, excluded=None):
                 )
             
             return html
+        else:
+            return ''

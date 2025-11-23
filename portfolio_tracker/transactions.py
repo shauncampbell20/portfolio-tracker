@@ -6,7 +6,7 @@ from portfolio_tracker.controller import controller
 import pandas as pd
 import yfinance as yf
 from flask import (
-    Blueprint, flash, g, redirect, render_template, request, url_for, Response
+    Blueprint, flash, g, redirect, render_template, request, url_for, Response, jsonify
 )
 
 bp = Blueprint('transactions', __name__, url_prefix='/transactions')
@@ -27,10 +27,12 @@ def enter():
         errors = controller.check_transaction('enter', tran)
 
         if not errors:
-            flash('Transaction Saved','success')
             tran = {}
+            data = {"message": "Transaction Saved."}
+            return jsonify(data), 200
         else:
-            flash('\n'.join(errors),'error')
+            data = {"message": '\n'.join(errors)}
+            return jsonify(data), 400
 
     return render_template('transactions/enter.html', tran=tran)
 
@@ -59,7 +61,9 @@ def edit(tran_id):
                 flash('Transaction Updated','success')
                 return redirect(url_for('transactions.view'))   
             else:
-                flash('\n'.join(errors),'error')
+                # flash('\n'.join(errors),'error')
+                data = {"message": '\n'.join(errors)}
+                return jsonify(data), 400
         return render_template('transactions/enter.html', tran=tran)
     else:
         return Response('401 Unauthorized',status=401)
@@ -118,8 +122,10 @@ def upload():
         price_col = request.form.get('price_select')
         type_col = request.form.get('type_select')
         if date_col == 'Select column' or symb_col == 'Select column' or q_col == 'Select column' or price_col == 'Select column':
-            flash('Please select columns')
-            return render_template('transactions/upload.html')
+            data = {"message": "Transaction Saved."}
+            return jsonify(data), 400
+            #flash('Please select columns')
+            #return render_template('transactions/upload.html')
         
         errors = []
         try:
@@ -151,16 +157,22 @@ def upload():
         except:
             errors.append(f'Unable to convert column {type_col} to numeric')
         if len(errors) > 0:
-            flash('\n'.join(errors))
-            return render_template('transactions/upload.html')
+            data = {"message": '\n'.join(errors)}
+            return jsonify(data), 400
+            #flash('\n'.join(errors))
+            #return render_template('transactions/upload.html')
         
         df = df.rename(columns={date_col:'tran_date',symb_col:'symbol',q_col:'quantity',price_col:'share_price',type_col:'tran_type'})
         errors = controller.check_transaction('upload', df)
         if len(errors) > 0:
-            flash('\n'.join(errors))
-            return render_template('transactions/upload.html')
-        flash(f'{len(df)} Transactions Uploaded')
-        return render_template('transactions/upload.html')
-
+            data = {"message": '\n'.join(errors)}
+            return jsonify(data), 400
+            #flash('\n'.join(errors))
+            #return render_template('transactions/upload.html')
+        #flash(f'{len(df)} Transactions Uploaded')
+        #return render_template('transactions/upload.html')
+        data = {"message": f'{len(df)} Transactions Uploaded'}
+        #return redirect(url_for('transactions.upload', code=302))
+        return jsonify(data), 200
     return render_template('transactions/upload.html')
 
