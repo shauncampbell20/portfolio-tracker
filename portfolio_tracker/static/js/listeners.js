@@ -26,22 +26,61 @@ document.addEventListener("DOMContentLoaded", function() {
     const btnsector = document.getElementById('btn-sector');
     const btnasset = document.getElementById('btn-asset');
     const checkboxes = document.querySelectorAll('input[type="checkbox"]');
+    const selectall = document.getElementById('select-all');
+    const selectnone = document.getElementById('select-none');
+    const btncompare = document.getElementById('btn-compare');
 
     checkboxes.forEach(function(checkbox) {
             checkbox.addEventListener('change', function() {
-                symb = this.id.split('-')[0];
+                symb = this.id.split('_')[0];
                 if (!this.checked) {
                     window.excluded.push(symb);
+                    selectall.checked = false;
                 } else {
                     window.excluded = window.excluded.filter(item => item !== symb);
+                    selectnone.checked = false;
                 }
             console.log(window.excluded);
+            
             getPositionsTable();
             getHistory();
             getAllocations();
             getMetricsTable();
             getSummary();
         });
+    });
+
+    // Select all checkboxes
+    selectall.addEventListener('click', function() {
+        checkboxes.forEach(function(checkbox) {
+            checkbox.checked = true;
+        });
+        selectnone.checked = false;
+        window.excluded = [];
+        getPositionsTable();
+        getHistory();
+        getAllocations();
+        getMetricsTable();
+        getSummary();
+    });
+
+    // Select none checkboxes
+    selectnone.addEventListener('click', function() {
+        window.excluded = [];
+        checkboxes.forEach(function(checkbox) {
+            checkbox.checked = false;
+            symb = checkbox.id.split('_')[0];
+            window.excluded.push(symb);
+        });
+        setTimeout(() => {
+            selectnone.checked = true;
+        }, 10);
+        
+        getPositionsTable();
+        getHistory();
+        getAllocations();
+        getMetricsTable();
+        getSummary();
     });
 
     // History Time-frame buttons
@@ -87,6 +126,8 @@ document.addEventListener("DOMContentLoaded", function() {
         btnadjust.classList.remove('disabled');
         btnadjust.classList.add('btn-outline-primary');
         btnadjust.classList.add('active');
+        btncompare.classList.remove('btn-primary');
+        btncompare.classList.add('btn-outline-primary');
         getHistory();
         getMetricsTable();
     });
@@ -96,6 +137,8 @@ document.addEventListener("DOMContentLoaded", function() {
         btnadjust.classList.remove('btn-outline-primary')
         btnadjust.classList.add('btn-primary');
         btnadjust.classList.add('disabled');
+        btncompare.classList.remove('btn-outline-primary');
+        btncompare.classList.add('btn-primary');
         getHistory();
         getMetricsTable();
     });
@@ -105,6 +148,8 @@ document.addEventListener("DOMContentLoaded", function() {
         btnadjust.classList.remove('btn-outline-primary')
         btnadjust.classList.add('btn-primary');
         btnadjust.classList.add('disabled');
+        btncompare.classList.remove('btn-outline-primary');
+        btncompare.classList.add('btn-primary');
         getHistory();
         getMetricsTable();
     });
@@ -114,6 +159,8 @@ document.addEventListener("DOMContentLoaded", function() {
         btnadjust.classList.remove('btn-outline-primary')
         btnadjust.classList.add('btn-primary');
         btnadjust.classList.add('disabled');
+        btncompare.classList.remove('btn-outline-primary');
+        btncompare.classList.add('btn-primary');
         getHistory();
         getMetricsTable();
     });

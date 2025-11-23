@@ -12,7 +12,14 @@
     <nav class="navbar sticky-top navbar-expand-lg navbar-light bg-light border bg-white">
       <ul class="nav ">
         <li class="nav-item">
-            <a class="nav-link {% if request.path == url_for('main.index') %} active {% endif %}" aria-current="page" href="{{ url_for('main.index') }}">Portfolio Tracker</a>
+          <div class="btn-group dropend">
+          <a class="nav-link dropdown-toggle" data-bs-toggle="offcanvas" href="#offcanvasExample" role="button" aria-controls="offcanvasExample">
+            Filters
+          </a>
+          </div>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link {% if request.path == url_for('main.index') %} active {% endif %}" aria-current="page" href="{{ url_for('main.index') }}">Home</a>
         </li>
       </ul>
       <ul class="nav nav-fill ms-auto justify-content-end">
@@ -22,30 +29,15 @@
         <li class="nav-item">
             <a class="nav-link" href="{{ url_for('main.refresh') }}">Refresh</a>
         </li>
-        <li class="nav-item dropdown">
-            <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="#" role="button" aria-expanded="false">Filter</a>
-            <ul class="dropdown-menu px-4 py-3">
-              {% for row in session['info'].keys() %}
-              <li>
-                <div class="form-check form-switch">
-                  <input class="form-check-input" type="checkbox" role="switch" id="{{row}}-toggle" checked>
-                  <label class="form-check-label" for="checkIndeterminateDisabled">{{ row }}</label>
-                </div>
-              </li>
-              {% endfor %}
-            </ul>
-        </li>
-        <li class="nav-item dropdown">
-            <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="#" role="button" aria-expanded="false">Transactions</a>
-            <ul class="dropdown-menu dropdown-menu-">
-              <li><a class="dropdown-item" href="{{ url_for('transactions.enter') }}">Enter</a></li>
-              <li><a class="dropdown-item" href="{{ url_for('transactions.view') }}">View/Edit</a></li>
-              <li><a class="dropdown-item" href="{{ url_for('transactions.upload') }}">Upload</a></li>
-            </ul>
-        </li>
+
         <li class="nav-item dropdown">
             <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="#" role="button" aria-expanded="false">{{ g.user['username'] }}</a>
             <ul class="dropdown-menu dropdown-menu-end">
+              <li><h6 class="dropdown-header">Transactions</h6></li>
+              <li><a class="dropdown-item" href="{{ url_for('transactions.enter') }}">Enter</a></li>
+              <li><a class="dropdown-item" href="{{ url_for('transactions.view') }}">View/Edit</a></li>
+              <li><a class="dropdown-item" href="{{ url_for('transactions.upload') }}">Upload</a></li>
+              <li><hr class="dropdown-divider"></li>
               <li><a class="dropdown-item" href="{{ url_for('auth.logout') }}">Log Out</a></li>
               {% if g.user['role'] == 'admin' %}
               <li><a class="dropdown-item" href="{{ url_for('main.users') }}">View Users</a></li>
@@ -65,6 +57,35 @@
         
       </ul>
     </nav>
+
+    <div class="offcanvas offcanvas-start" tabindex="-1" id="offcanvasExample" aria-labelledby="offcanvasExampleLabel">
+      <div class="offcanvas-header">
+        <h5 class="offcanvas-title" id="offcanvasExampleLabel">Filter Investments</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+      </div>
+      <div class="offcanvas-body">
+          <!-- <div class="btn-group" role="group">
+          <button id = "select-all" class="btn btn-sm btn-outline-primary active" >Select All</button>
+          <button id = "select-none" class="btn btn-sm btn-outline-primary" >Select None</button>
+          </div> -->
+          <div class="form-check form-switch">
+            <input class="form-check-input" type="checkbox" role="switch" id="select-none">
+            <label class="form-check-label" for="checkIndeterminateDisabled">Select None</label>
+          </div>
+          <div class="form-check form-switch">
+              <input class="form-check-input" type="checkbox" role="switch" id="select-all" checked>
+              <label class="form-check-label" for="checkIndeterminateDisabled">Select All</label>
+          </div>
+          {% for row in session['info'].keys() %}
+            <div class="form-check form-switch">
+              <input class="form-check-input" type="checkbox" role="switch" id="{{row}}_toggle" checked>
+              <label class="form-check-label" for="checkIndeterminateDisabled">{{ row }}</label>
+            </div>
+          {% endfor %}
+
+      </div>
+    </div>
+
     <header>
         {% block header %}{% endblock %}
     </header>
