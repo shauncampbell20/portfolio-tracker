@@ -61,7 +61,6 @@ def edit(tran_id):
                 flash('Transaction Updated','success')
                 return redirect(url_for('transactions.view'))   
             else:
-                # flash('\n'.join(errors),'error')
                 data = {"message": '\n'.join(errors)}
                 return jsonify(data), 400
         return render_template('transactions/enter.html', tran=tran)
@@ -109,6 +108,8 @@ def view():
 @bp.route('/upload', methods=('GET', 'POST'))
 @login_required
 def upload():
+    '''Upload CSV file of transactions
+    '''
     if request.method == 'POST':
         try:
             df = pd.read_csv(request.files.get('formFile'))
@@ -124,8 +125,6 @@ def upload():
         if date_col == 'Select column' or symb_col == 'Select column' or q_col == 'Select column' or price_col == 'Select column':
             data = {"message": "Transaction Saved."}
             return jsonify(data), 400
-            #flash('Please select columns')
-            #return render_template('transactions/upload.html')
         
         errors = []
         try:
@@ -159,20 +158,15 @@ def upload():
         if len(errors) > 0:
             data = {"message": '\n'.join(errors)}
             return jsonify(data), 400
-            #flash('\n'.join(errors))
-            #return render_template('transactions/upload.html')
         
         df = df.rename(columns={date_col:'tran_date',symb_col:'symbol',q_col:'quantity',price_col:'share_price',type_col:'tran_type'})
         errors = controller.check_transaction('upload', df)
         if len(errors) > 0:
             data = {"message": '\n'.join(errors)}
             return jsonify(data), 400
-            #flash('\n'.join(errors))
-            #return render_template('transactions/upload.html')
-        #flash(f'{len(df)} Transactions Uploaded')
-        #return render_template('transactions/upload.html')
+
         data = {"message": f'{len(df)} Transactions Uploaded'}
-        #return redirect(url_for('transactions.upload', code=302))
         return jsonify(data), 200
+        
     return render_template('transactions/upload.html')
 

@@ -32,6 +32,8 @@ def init_db():
 
     with current_app.open_resource('schema.sql') as f:
         db.executescript(f.read().decode('utf8'))
+
+    # Sample accounts and transactions
     db.execute(
         "INSERT INTO user (username, password, role) VALUES (?, ?, ?)",
         ('admin', generate_password_hash('12345678'), 'admin'),

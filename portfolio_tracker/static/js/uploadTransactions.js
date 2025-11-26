@@ -1,7 +1,9 @@
 const form = document.getElementById('uploadForm');
 
 form.addEventListener('submit', async(event) => {
-  event.preventDefault(); // Prevent default form submission
+  // Function to handle file upload
+  
+  event.preventDefault(); 
 
   const formData = new FormData(form);
 
@@ -11,12 +13,12 @@ form.addEventListener('submit', async(event) => {
 
   // Show spinner 
   uploadSpinner.classList.remove('d-none');
-  uploadButton.disabled = true; // Disable button to prevent multiple clicks
+  uploadButton.disabled = true; 
 
   try {
     const response = await fetch('/transactions/upload', {
       method: 'POST',
-      body: formData, // FormData object is automatically handled as 'multipart/form-data'
+      body: formData, 
     })
     .then(response => {
         if (response.redirected){
@@ -42,8 +44,5 @@ form.addEventListener('submit', async(event) => {
 
   } catch (error) {
     console.error('Error:', error);
-    // Handle error, display messages, etc.
   }
-
-
 });

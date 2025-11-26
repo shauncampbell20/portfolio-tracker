@@ -1,14 +1,10 @@
 function getHistory() {
-    // function to get graph with fetch and render with Plotly
-    // const url = "{{ url_for('main.history_endpoint') }}?tf="+tf;
-    
+    // function to get graph with fetch and render with Plotly    
     setTimeout(() => {
         histUrl = window.historyUrl+'?tf='+window.tf+'&adj='+window.adj+'&comp='+window.compare+'&excluded='+window.excluded.join(',')
-        console.log(histUrl);
         fetch(histUrl)
         .then(resp => {
             if (resp.status == 204) {
-            console.log('no content');
             document.getElementById('history-graph').innerText = '';
             } else if (resp.ok) {
             return resp.json();

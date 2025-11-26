@@ -1,5 +1,7 @@
 document.getElementById('formFile').addEventListener('change', function(event) {
-    const file = event.target.files[0]; // Get the selected file
+    // Function to parse uploaded file
+
+    const file = event.target.files[0]; 
 
     if (file) {
         const reader = new FileReader();
@@ -12,6 +14,7 @@ document.getElementById('formFile').addEventListener('change', function(event) {
             const priceDropdown = document.getElementById('price_select');
             const typeDropdown = document.getElementById('type_select');
             
+            // Base options
             const baseOption1 = document.createElement('option');
             const baseOption2 = document.createElement('option');
             const baseOption3 = document.createElement('option');
@@ -27,8 +30,6 @@ document.getElementById('formFile').addEventListener('change', function(event) {
             baseOption4.textContent = 'Select column'; 
             baseOption5.value = 'Select column'; 
             baseOption5.textContent = 'Select column'; 
-                 
-
             tranDropdown.innerHTML = ''; 
             symbolDropdown.innerHTML = ''; 
             quantityDropdown.innerHTML = ''; 
@@ -42,8 +43,8 @@ document.getElementById('formFile').addEventListener('change', function(event) {
             
             let headers = fileContent.split(/\r?\n|\r/)[0]; 
             let items = headers.replace(/['"]/g, '').split(',');
-            console.log(items)
-
+            
+            // Add column names to dropdowns
             items.forEach(itemText => {
                 const option1 = document.createElement('option');
                 const option2 = document.createElement('option');
@@ -67,7 +68,6 @@ document.getElementById('formFile').addEventListener('change', function(event) {
                 typeDropdown.appendChild(option5);
             });
         };
-
-        reader.readAsText(file); // Read the file as text
+        reader.readAsText(file);
     }
 });

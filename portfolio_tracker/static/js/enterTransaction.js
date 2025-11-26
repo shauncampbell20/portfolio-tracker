@@ -1,6 +1,5 @@
 const form = document.getElementById('enterForm');
 const currentUrl = window.location.href;
-console.log(currentUrl);
 mode = "enter";
 
 if (currentUrl.includes('edit')) {
@@ -8,7 +7,9 @@ if (currentUrl.includes('edit')) {
 }
 
 form.addEventListener('submit', async(event) => {
-  event.preventDefault(); // Prevent default form submission
+  // Handle submitting and editing transactions
+  
+  event.preventDefault(); 
 
   const formData = new FormData(form);
 
@@ -19,7 +20,7 @@ form.addEventListener('submit', async(event) => {
 
   // Show spinner 
   enterSpinner.classList.remove('d-none');
-  enterButton.disabled = true; // Disable button to prevent multiple clicks
+  enterButton.disabled = true; 
 
   try {
     if (mode == "enter") {
@@ -29,7 +30,7 @@ form.addEventListener('submit', async(event) => {
     }
     const response = await fetch(Url, {
       method: 'POST',
-      body: formData, // FormData object is automatically handled as 'multipart/form-data'
+      body: formData, 
     })
     .then(response => {
         if (response.redirected){
@@ -58,7 +59,6 @@ form.addEventListener('submit', async(event) => {
 
   } catch (error) {
     console.error('Error:', error);
-    // Handle error, display messages, etc.
   }
 
 

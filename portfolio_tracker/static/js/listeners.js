@@ -1,9 +1,6 @@
-// window.tf = "";
-// window.adjust = "False";
-// window.allocations = "sector";
-
 document.addEventListener("DOMContentLoaded", function() {
-    console.log('running onload');
+    // Reactivity with event listeners
+
     window.disp = "sector";
     window.excluded = [];
     getHistory();
@@ -30,6 +27,7 @@ document.addEventListener("DOMContentLoaded", function() {
     const selectnone = document.getElementById('select-none');
     const btncompare = document.getElementById('btn-compare');
 
+    // Each filter checkbox
     checkboxes.forEach(function(checkbox) {
             checkbox.addEventListener('change', function() {
                 symb = this.id.split('_')[0];
@@ -40,7 +38,6 @@ document.addEventListener("DOMContentLoaded", function() {
                     window.excluded = window.excluded.filter(item => item !== symb);
                     selectnone.checked = false;
                 }
-            console.log(window.excluded);
             
             getPositionsTable();
             getHistory();
@@ -174,8 +171,4 @@ document.addEventListener("DOMContentLoaded", function() {
         window.disp = "asset";
         getAllocations();
     });
-
-
-
-
 });

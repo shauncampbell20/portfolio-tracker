@@ -1,11 +1,14 @@
 {% extends 'base.html' %}
 
 {% block content %}
+<button class="btn bg-transparent" onclick="window.history.back()">
+  <img src="{{ url_for('static', filename='images/back.png') }}" width="12" height="12">
+  Back
+</button>
 <div class="d-flex justify-content-center align-items-center min-vh-90">
   <div class="p-5 m-3 border bg-white w-50">
     <form method="post" id="uploadForm" enctype="multipart/form-data">
       <h1 class="h3 mb-3 fw-normal">Transaction Upload</h1>
-
       <!-- Flash Messages -->
       <div class="alert d-none" role="alert" id="upload-flash"></div>
       {% with messages = get_flashed_messages(with_categories=true) %}
@@ -15,7 +18,7 @@
           {% endfor %}
         {% endif %}
       {% endwith %}
-
+      <div><p>Upload a CSV file containing multiple transactions.</p></div>
       <!-- Inputs -->
       <div class="mb-3">
         <label for="formFile" class="form-label">Select File</label>
@@ -23,22 +26,27 @@
       </div>
       <!-- <div class="p-3"></div> -->
         <label for="tran_date_select" class="form-label">Transaction Date</label>
+        <small class="form-text text-muted">Column that contains the transaction dates.</small>
         <select name="tran_date_select" class="form-select" id="tran_date_select" required>
         </select>
         <div class="p-3"></div>
         <label for="symbol_select" class="form-label">Symbol</label>
+        <small class="form-text text-muted">Column that contains the symbols.</small>
         <select name="symbol_select" class="form-select" id="symbol_select" required>
         </select>
         <div class="p-3"></div>
         <label for="type_select" class="form-label">Transaction Type</label>
+        <small class="form-text text-muted">Column that contains the transaction types. Must be BUY, SELL, or FEE.</small>
         <select name="type_select" class="form-select" id="type_select" required>
         </select>
         <div class="p-3"></div>
         <label for="quantity_select" class="form-label">Quantity</label>
+        <small class="form-text text-muted">Column that contains the quantities. Must be positive numbers.</small>
         <select name="quantity_select" class="form-select" id="quantity_select" required>
         </select>
         <div class="p-3"></div>
         <label for="price_select" class="form-label">Price per Share</label>
+        <small class="form-text text-muted">Column that contains the prices per share. Must be positive numbers.</small>
         <select name="price_select" class="form-select" id="price_select" required>
         </select>
         <div class="p-3"></div>

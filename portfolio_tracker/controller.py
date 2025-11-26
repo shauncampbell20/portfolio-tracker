@@ -94,7 +94,6 @@ class Controller:
     def update_info(self, symbols):
         ''' Check and update information for symbols
         '''
-        print('---update info')
         self.errors = []
 
         if len(symbols) == 0: # No symbols provided
@@ -140,7 +139,6 @@ class Controller:
     def update_history(self, new_symbols, dt):
         '''Check and update price histories for symbols
         '''
-        print('---update history')
         if not hasattr(self, 'errors'):
             self.errors = []
 
@@ -170,17 +168,14 @@ class Controller:
             min_date = min(history.index)
             new_symbols = [s for s in new_symbols if s not in symbols]
             if len(new_symbols) > 0: # new symbols
-                print('--new symbol(s)')
                 update = True
                 symbols.extend(new_symbols)
             if dt < min_date:
-                print('--new min date')
                 update = True
                 min_date = dt
 
         # history doesn't exist
         else: 
-            print('--history does not exist')
             update = True
             min_date = dt
             symbols = []
@@ -190,20 +185,17 @@ class Controller:
         # update
         if update:
             try:
-                print('min date:',min_date)
                 tickers=yf.Tickers(' '.join(symbols))
                 history = tickers.history(start=min_date.strftime('%Y-%m-%d'),period=None,interval='1d',auto_adjust=False)
                 history=history['Close'].dropna()
                 history.index = history.index.strftime('%Y-%m-%d')
                 session['history'] = history.to_dict()
             except Exception as e:
-                print(e)
                 self.errors.append('Failed to update history')
 
     def update_transactions(self, action, tran):
         '''Handle splits and cache recomputed transactions
         '''
-        print('---update transactions')
         # get transactions from database and ensure sell/fee transactions are negative
         db = get_db()
         transactions_df = pd.read_sql_query('''SELECT tran_date, symbol, quantity, share_price, tran_type, id  FROM transactions WHERE user_id = ?''', db, params=(g.user['id'],))
@@ -267,14 +259,11 @@ class Controller:
     def update_positions(self):
         '''Update positions 
         '''
-        print('---update positions')
         if not hasattr(self, 'errors'):
             self.errors = []
 
         transactions_df =pd.DataFrame(session.get('transactions_df'))
         if isinstance(transactions_df,pd.DataFrame) and len(transactions_df) > 0:
-            print('-retrieved transactions_df')
-            print(transactions_df)
             transactions_df['tran_date'] = pd.to_datetime(transactions_df['tran_date'])
             # calculate positions
             transactions_df = transactions_df.sort_values('tran_date')
@@ -314,19 +303,17 @@ class Controller:
                         self.errors.append('Not enough shares to sell')
 
             if len(self.errors) == 0:
-                print('-set positions')
                 session['positions'] = positions
             else:
                 # unwind
-                print(self.errors)
-                print('-unwind')
                 session['transactions_df'] = None
                 self.update_transactions(None, None)
         else:
-            print('-no transactions_df')
             session['positions'] = {}
 
     def update_database(self, action, tran):
+        ''' Update the database
+        '''
         db = get_db()
         if action == 'enter':
             # Save transaction

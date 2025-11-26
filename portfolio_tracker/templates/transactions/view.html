@@ -1,6 +1,10 @@
 {% extends 'base.html' %}
 
 {% block content %}
+<button class="btn bg-transparent" onclick="window.history.back()">
+  <img src="{{ url_for('static', filename='images/back.png') }}" width="12" height="12">
+  Back
+</button>
   <div class="d-flex justify-content-center align-items-center min-vh-90">
     <div class="p-5 m-3 border bg-white w-50">
         <h1 class="h3 mb-3 fw-normal">Your Transactions</h1>

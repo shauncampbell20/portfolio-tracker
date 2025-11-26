@@ -29,7 +29,6 @@ def history_endpoint():
     excluded = request.args.get('excluded')
     if comp == 'sp':
         comp = 's&p'
-    print(adj)
     return get_history_graph(timeframe, adj, comp, excluded)
 
 @bp.route('/positions', methods=('GET','POST'))
@@ -75,7 +74,7 @@ def refresh():
     controller.update_transactions(None,None)
     controller.update_positions()
     controller.update_database(None,None)
-    return redirect(url_for("main.index")) #render_template('main/index.html')
+    return redirect(url_for("main.index")) 
 
 @bp.route('/users', methods=('GET','POST'))
 def users():
@@ -93,7 +92,6 @@ def users():
                                     ''',db)
         user['last_login'] = user['last_login'].apply(lambda x: pd.Timestamp(x).strftime('%m/%d/%Y') if not pd.isna(x) else '')
         user = user.to_dict('records')
-        print(user)
         return render_template('main/users.html', user=user)
     else:
         return Response('401 Unauthorized',status=401)

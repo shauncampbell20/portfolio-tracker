@@ -1,13 +1,15 @@
 const refresh = document.getElementById('refreshButton');
 
 refresh.addEventListener('click', async(event) => {
-  event.preventDefault(); // Prevent default form submission
+  // Function for data refresh
+  
+  event.preventDefault(); 
 
   const refreshSpinner = document.getElementById('refreshSpinner');
 
   // Show spinner 
   refreshSpinner.classList.remove('d-none');
-  refresh.disabled = true; // Disable button to prevent multiple clicks
+  refresh.disabled = true; 
 
   try {
     const response = await fetch('/refresh', {

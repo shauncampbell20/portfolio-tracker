@@ -62,7 +62,6 @@ def get_positions_table(excluded=None):
             positions.rename(columns={'symbol':'Symbol', 'quantity':'Qty', 'tot_cost_basis':'Cost Basis', 'last_price':'Price', 'mk_val':'Mkt Val', 
                                     'daily_gain_loss':'Day Chng $', 'daily_gain_loss_pct':'Day Chng %', 'rlz_gain_loss':'Rlz Gain Loss $', 'urlz_gain_loss':'Urlz Gain Loss $', 
                                     'tot_gain_loss':'Tot Gain Loss $', 'gain_loss_pct':'Tot Gain Loss %'}, inplace=True)
-            #positions.columns = ['Symbol','Qty','Cost Basis','Price','Mkt Val','Day Chng $','Day Chng %','Gain Loss $','Gain Loss %']
             positions = positions[['Symbol','Qty','Price','Mkt Val','Day Chng $','Day Chng %','Cost Basis','Rlz Gain Loss $','Urlz Gain Loss $','Tot Gain Loss $','Tot Gain Loss %']]
             positions.sort_values('Mkt Val',ascending=False,inplace=True)
 
@@ -88,6 +87,8 @@ def get_positions_table(excluded=None):
             return ''
 
 def calculate_value_history(transactions_df, history):
+    ''' Calculate user's portfolio value history, adjusting for buy/sell transactions
+    '''
     transactions_df['cost'] = transactions_df['quantity']*transactions_df['share_price']
     trades=transactions_df.groupby(['tran_date','symbol'],as_index=False).agg({'quantity':'sum','cost':'sum'})
     trades['tran_date']=pd.to_datetime(trades['tran_date'])
@@ -96,16 +97,19 @@ def calculate_value_history(transactions_df, history):
     total_cost = sum(transactions_df.apply(lambda x: abs(x['quantity'])*x['share_price'] if x['tran_type'] == 'BUY' else 0, axis=1))
     total_sell = sum(transactions_df.apply(lambda x: abs(x['quantity'])*x['share_price'] if x['tran_type'] == 'SELL' else 0, axis=1))
 
+    # quantity history
     qhistory=pd.DataFrame(index=history.index).merge(trades['quantity'],left_index=True, right_index=True,how='outer')
     qhistory=qhistory.fillna(0).cumsum(axis=0)
     qhistory=qhistory[qhistory.index.isin(history.index)]
     value_history=pd.DataFrame((history*qhistory).sum(axis=1), columns=['value'])
 
+    # cost history
     chistory=pd.DataFrame(index=history.index).merge(trades['cost'],left_index=True, right_index=True,how='outer')
     chistory=chistory.fillna(0).cumsum(axis=0)
     chistory=chistory[chistory.index.isin(history.index)]
     cost_history = pd.DataFrame(chistory.sum(axis=1),columns=['cost'])
 
+    # Adjustments
     value_history = value_history.merge(cost_history,left_index=True, right_index=True)
     value_history['adj_value'] = value_history['value']-value_history['cost']+total_cost-total_sell
     value_history['adj_value2'] = value_history['value']-value_history['cost']+total_cost
@@ -147,6 +151,7 @@ def get_history_graph(timeframe, adj=False, comp=None, excluded=None):
             value_history['s&p'] = np.cumprod(history['^GSPC'].pct_change().fillna(0)+1)*value_history['adj_value'].iloc[0]
             value_history['dji'] = np.cumprod(history['^DJI'].pct_change().fillna(0)+1)*value_history['adj_value'].iloc[0]
             value_history['nasdaq'] = np.cumprod(history['^IXIC'].pct_change().fillna(0)+1)*value_history['adj_value'].iloc[0]
+            
             # adjusted
             plot_col = 'value'
             if adj == "True":
@@ -191,12 +196,13 @@ def get_history_graph(timeframe, adj=False, comp=None, excluded=None):
                 yaxis_tickprefix = '$',
                 yaxis_tickformat = ',.0f'
             )
-            #fig.update_yaxes(tickformat=".4s")
             return fig.to_json()
         else:
             return Response(status=204)
 
 def get_allocations_graph(disp, excluded=None):
+    '''Calculate and format the sector/asset allocation chart
+    '''
     if g.user:
         
         # get positions
@@ -285,6 +291,8 @@ def get_allocations_graph(disp, excluded=None):
             return Response(status=204)
 
 def get_summary_numbers(excluded=None):
+    '''Get summary numbers for the user's portfolio value, day change and total change
+    '''
     if g.user:
 
         db = get_db()
@@ -339,6 +347,8 @@ def get_summary_numbers(excluded=None):
         return None, None, None, None, None
 
 def get_summary_numbers2(excluded=None):
+    '''Return summary numbers in json format
+    '''
     curr_value_str, daily_str, tot_str, dgl_col, tot_col = get_summary_numbers(excluded)
     return {
         'curr_value_str':curr_value_str,
@@ -349,6 +359,8 @@ def get_summary_numbers2(excluded=None):
     }
 
 def calc_ror(data, offset):
+    '''Calculate rate of return given value history and day offset
+    '''
     if offset == 'all':
         offset = (data.index[-1]-data.index[0]).days
     start = datetime.today()-timedelta(days=int(offset))
@@ -360,6 +372,8 @@ def calc_ror(data, offset):
     return total_r**(1/N)-1
 
 def simple_linear_regression(x, y):
+    '''Simple linear regression  
+    '''
     n = len(x)
     
     mean_x = np.mean(x)
@@ -377,6 +391,8 @@ def simple_linear_regression(x, y):
     return m, c
 
 def calc_beta_alpha(data, col, offset):
+    '''Calculate beta and alpha of portfolio given value history and time period offset
+    '''
     if offset != 'all':
         start = datetime.today()-timedelta(days=int(offset))
         if start < data.index[0]:
@@ -388,6 +404,8 @@ def calc_beta_alpha(data, col, offset):
     return beta, alpha
 
 def calculate_sharpe_ratio(data, col, offset):
+    '''Calculate sharpe ratio given value history and time period offset
+    '''
     if offset != 'all':
         start = datetime.today()-timedelta(days=int(offset))
         if start < data.index[0]:
@@ -396,7 +414,6 @@ def calculate_sharpe_ratio(data, col, offset):
     rx = np.mean(data[col].pct_change().dropna())
     rf = np.mean(data['tips'])/100/252
     std = np.std(data[col].pct_change().dropna())
-    print(offset, rx, rf, std)
     return ((rx-rf)/std)*np.sqrt(252)
 
 def get_metrics(comp=None, excluded=None):
@@ -418,7 +435,6 @@ def get_metrics(comp=None, excluded=None):
             value_history['dji'] = history['^DJI']
             value_history['nasdaq'] = history['^IXIC']
             value_history['tips'] = history['^TNX']
-            print(value_history)
             ror = [calc_ror(value_history['adj_value2'], off) for off in [30,91,182,365,1095,'all']]
             alpha_beta = [calc_beta_alpha(value_history, 'value', off) for off in [30,91,182,365,1095,'all']]
             sharpe = [calculate_sharpe_ratio(value_history,'adj_value2', off) for off in [30,91,182,365,1095,'all']]
@@ -430,23 +446,15 @@ def get_metrics(comp=None, excluded=None):
                 metrics=pd.concat([pd.DataFrame(ror).T, pd.DataFrame(ror_comp).T, pd.DataFrame(alpha_beta).T, pd.DataFrame(alpha_beta_comp).T, pd.DataFrame(sharpe).T, pd.DataFrame(sharpe_comp).T])
                 metrics.index=['Annualized ROR',comp.upper()+' Annualized ROR','Beta','Alpha',comp.upper()+' Beta',comp.upper()+' Alpha','Sharpe Ratio',comp.upper()+' Sharpe Ratio']
                 metrics = metrics.reindex(['Annualized ROR',comp.upper()+' Annualized ROR','Beta',comp.upper()+' Beta','Alpha',comp.upper()+' Alpha','Sharpe Ratio',comp.upper()+' Sharpe Ratio'])
-                pctsubset = ['Annualized ROR',comp.upper()+' Annualized ROR']
-                fltsubset = ['Beta','Alpha','Sharpe Ratio',comp.upper()+' Beta',comp.upper()+' Alpha',comp.upper()+' Sharpe Ratio']
-                #fillsubset = [comp.upper()+' Annualized ROR',comp.upper()+' Beta',comp.upper()+' Alpha',comp.upper()+' Sharpe Ratio']
-                attr = 'class="table table table-striped table-sm'
             else:
                 metrics=pd.concat([pd.DataFrame(ror).T, pd.DataFrame(alpha_beta).T, pd.DataFrame(sharpe).T])
                 metrics.index=['Annualized ROR','Beta','Alpha','Sharpe Ratio']
-                pctsubset = ['Annualized ROR']
-                fltsubset = ['Beta','Alpha','Sharpe Ratio']
-                #fillsubset=[]
-                attr = 'class="table table-hover table-sm'
             metrics.columns=['1M','3M','6M','1Y','3Y','All']
-            print(metrics)
             styles = [
                 dict(selector="th", props=[("font-size", "12px")]) 
             ]
-
+            
+            # Format table with comparison
             if comp:
                 html = (
                     metrics.style
@@ -459,6 +467,8 @@ def get_metrics(comp=None, excluded=None):
                     .set_table_attributes('class="table table-hover table-striped table-sm"')
                     .to_html()
                 )
+            
+            # format table with no comparison
             else:
                 html = (
                     metrics.style

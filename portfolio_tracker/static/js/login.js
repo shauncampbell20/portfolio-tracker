@@ -1,7 +1,9 @@
 const form = document.getElementById('loginForm');
 
 form.addEventListener('submit', async(event) => {
-  event.preventDefault(); // Prevent default form submission
+  // Function to handle login
+  
+  event.preventDefault(); 
   const formData = new FormData(form);
 
   const loginButton = document.getElementById('loginButton');
@@ -9,12 +11,12 @@ form.addEventListener('submit', async(event) => {
 
   // Show spinner 
   loginSpinner.classList.remove('d-none');
-  loginButton.disabled = true; // Disable button to prevent multiple clicks
+  loginButton.disabled = true; 
 
   try {
     const response = await fetch('/auth/login', {
       method: 'POST',
-      body: formData, // FormData object is automatically handled as 'multipart/form-data'
+      body: formData, 
     })
     .then(response => {
         if (response.redirected){
@@ -24,7 +26,6 @@ form.addEventListener('submit', async(event) => {
         }
     })
     .then(data => {
-        console.log(data.message);
         window.location.href = data.url
     })
 
