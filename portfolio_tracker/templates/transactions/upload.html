@@ -18,13 +18,13 @@
           {% endfor %}
         {% endif %}
       {% endwith %}
+
       <div><p>Upload a CSV file containing multiple transactions.</p></div>
       <!-- Inputs -->
       <div class="mb-3">
         <label for="formFile" class="form-label">Select File</label>
         <input name="formFile" class="form-control" type="file" id="formFile" accept=".csv,.txt" required>
       </div>
-      <!-- <div class="p-3"></div> -->
         <label for="tran_date_select" class="form-label">Transaction Date</label>
         <small class="form-text text-muted">Column that contains the transaction dates.</small>
         <select name="tran_date_select" class="form-select" id="tran_date_select" required>
@@ -53,8 +53,6 @@
       <button class="btn btn-primary w-100 py-2" type="submit" id="uploadButton">
       <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true" id="uploadSpinner"></span>
       Upload</button>
-      <!-- <button class="btn btn-primary w-100 py-2" type="submit" value="Upload">Submit</button> -->
-      
     </form>
     <script src="{{ url_for('static', filename='js/parseUpload.js') }}"></script>
     <script type="text/javascript" src="{{ url_for('static', filename='js/uploadTransactions.js') }}"></script>

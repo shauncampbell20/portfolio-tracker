@@ -17,6 +17,7 @@
   <script type="text/javascript" src="{{ url_for('static', filename='js/getPositionsTable.js') }}"></script>
   <script type="text/javascript" src="{{ url_for('static', filename='js/getSummary.js') }}"></script>
   <script type="text/javascript" src="{{ url_for('static', filename='js/listeners.js') }}"></script>
+  
   <!-- User logged in -->
   <div class="container-fluid">
     <div class="row justify-content-center">
@@ -139,30 +140,8 @@
 
   {% else %}
   <!-- No user logged in -->
-  <!-- <section class="hero section"></section>
-    <div class="container">
-      <div class="row align-items-center">
-        <div class="col-lg-6">
-          <div class="hero-content">
-            <h1>Portfolio Tracker</h1>
-            <p>
-              Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium totam rem aperiam.
-            </p>
-            <div class="hero-actions justify-content-center justify-content-lg-start">
-              <a href="{{ url_for('auth.register') }}" class="button-1 btn-primary equal-width-btn">Create Account</a>
-              <a href="{{ url_for('auth.login') }}" class="button-1 btn-primary equal-width-btn">Log In</a>
-            </div>
-          </div>
-        </div>
-        <div class="col-lg-6">
-          <div class="hero-image">
-            <img src="{{ url_for('static', filename='images/chart.svg')}}" class="img-fluid floating"
-          </div>
-        </div>
-      </div>
-    </div> -->
   <h1 class="text-center p-5 m-3">Portfolio Tracker</h1>
-  <div class="container-fluid"> 
+    <div class="container-fluid"> 
         <div class="row justify-content-center">
           <a href="{{ url_for('auth.register') }}" class="btn btn-primary equal-width-btn">Create Account</a>
           <a href="{{ url_for('auth.login') }}" class="btn btn-primary equal-width-btn">Log In</a>
